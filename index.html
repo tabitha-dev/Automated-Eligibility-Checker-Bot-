@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexGen RCM | AI Eligibility Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .ai-pulse {
+            animation: pulse-blue 2s infinite;
+        }
+        @keyframes pulse-blue {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .loader-bar {
+            height: 4px;
+            width: 100%;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+        .loader-bar-value {
+            width: 100%;
+            height: 100%;
+            background-color: #3b82f6;
+            animation: indeterminate 1.5s infinite linear;
+            transform-origin: 0% 50%;
+        }
+        @keyframes indeterminate {
+            0% { transform:  translateX(0) scaleX(0); }
+            40% { transform:  translateX(0) scaleX(0.4); }
+            100% { transform:  translateX(100%) scaleX(0.5); }
+        }
+        /* Custom scrollbar for table containers */
+        .custom-scroll::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        /* Modal Animation */
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out forwards;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex overflow-hidden">
+
+    <!-- Toast Container (New Feature: UX Polish) -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col shadow-2xl z-10">
+        <div class="p-6 flex items-center gap-3 text-white border-b border-slate-800">
+            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-dna text-white"></i>
+            </div>
+            <span class="font-bold text-lg tracking-tight">NexGen<span class="text-blue-400">AI</span></span>
+        </div>
+        
+        <nav class="flex-grow p-4 space-y-2">
+            <button onclick="switchTab('eligibility')" id="nav-eligibility" class="w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all">
+                <i class="fa-solid fa-magnifying-glass-chart w-6"></i> Eligibility Check
+            </button>
+            <button onclick="switchTab('claims')" id="nav-claims" class="w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group">
+                <i class="fa-solid fa-file-invoice-dollar w-6 text-slate-500 group-hover:text-white"></i> Claims Status
+            </button>
+            <button onclick="switchTab('denials')" id="nav-denials" class="w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group">
+                <i class="fa-solid fa-robot w-6 text-purple-400 group-hover:text-purple-300"></i> AI Denials Manager
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <div class="bg-slate-800 rounded-lg p-3 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-green-400 to-blue-500"></div>
+                <div>
+                    <p class="text-xs text-slate-400">Logged in as</p>
+                    <p class="text-sm font-semibold text-white">Bot_Admin_01</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col relative overflow-y-auto">
+        <!-- Top Header -->
+        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 shadow-sm">
+            <h2 id="header-title" class="text-slate-700 font-semibold text-lg">Real-Time Eligibility Verification</h2>
+            <div class="flex items-center gap-4">
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200">
+                    <i class="fa-solid fa-circle text-[8px] mr-1 align-middle"></i> SYSTEM ONLINE
+                </span>
+            </div>
+        </header>
+
+        <!-- Content Body -->
+        <div class="p-8 max-w-6xl mx-auto w-full relative">
+            
+            <!-- VIEW 1: ELIGIBILITY CHECK -->
+            <div id="view-eligibility" class="block animate-fade-in">
+                <!-- Search Panel -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700"><i class="fa-solid fa-sliders mr-2 text-blue-500"></i>Check Parameters</h3>
+                        <button onclick="prefillDemo()" class="text-xs text-blue-500 hover:underline">Auto-Fill Demo Data</button>
+                    </div>
+                    
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Payer Select -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Select Payer</label>
+                            <div class="relative">
+                                <select id="payer-select" class="block appearance-none w-full bg-slate-50 border border-slate-300 text-slate-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
+                                    <option value="medicare">Medicare (CMS)</option>
+                                    <option value="medicaid">Medicaid (State)</option>
+                                    <option value="uhc">UnitedHealthcare (UHC)</option>
+                                    <option value="anthem">Elevance (Anthem BCBS)</option>
+                                    <option value="aetna">Aetna (CVS Health)</option>
+                                    <option value="cigna">Cigna Group</option>
+                                    <option value="kaiser">Kaiser Permanente</option>
+                                    <option value="humana">Humana</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Member ID -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Member ID / MBI</label>
+                            <input id="member-id" type="text" placeholder="Enter ID..." class="appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
+                        </div>
+
+                        <!-- DOB -->
+                        <div class="col-span-1">
+                            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Date of Birth</label>
+                            <input id="dob" type="date" class="appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
+                        </div>
+
+                        <!-- Service Type (Updated with CPT) -->
+                        <div class="col-span-1">
+                            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">CPT / Service Code</label>
+                            <select id="service-type" class="block w-full bg-slate-50 border border-slate-300 text-slate-700 py-3 px-4 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500">
+                                <option value="99203">99203 - New Patient Visit</option>
+                                <option value="99214">99214 - Established Visit</option>
+                                <option value="73721">73721 - MRI (Knee)</option>
+                                <option value="44120">44120 - Small Bowel Surgery</option>
+                            </select>
+                        </div>
+
+                        <!-- Button -->
+                        <div class="col-span-1 md:col-span-2 flex items-end">
+                            <button id="btn-verify" onclick="runVerification()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow-lg shadow-blue-500/30 transition-all transform active:scale-95 flex justify-center items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Run Eligibility & Scrubber
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NEW: CPT Scrubber Warning -->
+                <div id="scrubber-warning" class="hidden mb-8 bg-red-100 border border-red-300 text-red-800 p-4 rounded-xl shadow-inner font-semibold">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> 
+                    <span id="scrubber-message">CPT Scrubber Warning</span>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loader" class="hidden mb-8">
+                    <div class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center">
+                        <div class="loader-bar rounded-full mb-4">
+                            <div class="loader-bar-value rounded-full"></div>
+                        </div>
+                        <p class="text-slate-500 text-sm font-medium animate-pulse">Contacting Payer Gateway (EDI 270/271)...</p>
+                        <p id="loader-subtext" class="text-xs text-slate-400 mt-1">Authenticating securely via HIPPA-compliant tunnel</p>
+                    </div>
+                </div>
+
+                <!-- Results Panel -->
+                <div id="results-panel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                    
+                    <!-- Main Coverage Card -->
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700">Coverage Details</h3>
+                            <div class="flex items-center gap-3">
+                                <button onclick="saveToEHR()" class="text-xs text-slate-500 hover:text-blue-600 transition-colors hidden md:block">
+                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Save to EHR
+                                </button>
+                                <span id="status-badge" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-bold">PENDING</span>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-start justify-between mb-6">
+                                <div>
+                                    <h2 id="res-name" class="text-2xl font-bold text-slate-800">--</h2>
+                                    <p id="res-payer" class="text-slate-500 text-sm">--</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-slate-400 uppercase tracking-wide">Effective Date</p>
+                                    <p id="res-date" class="font-semibold text-slate-700">--</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                                <!-- Plan Type Field -->
+                                <div class="col-span-2 md:col-span-1 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                    <p class="text-xs text-indigo-500 font-bold uppercase mb-1">Plan Structure</p>
+                                    <p id="res-plantype" class="text-lg font-bold text-slate-800">--</p>
+                                </div>
+                                
+                                <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <p class="text-xs text-blue-500 font-bold uppercase mb-1">Deductible (Individual)</p>
+                                    <p id="res-deductible" class="text-xl font-bold text-slate-800">--</p>
+                                </div>
+                                <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+                                    <p class="text-xs text-green-600 font-bold uppercase mb-1">Deductible Met (YTD)</p>
+                                    <p id="res-met" class="text-xl font-bold text-slate-800">--</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 font-bold uppercase mb-1">Co-Insurance</p>
+                                    <p id="res-coins" class="text-sm font-semibold text-slate-700">--</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 font-bold uppercase mb-1">Co-Pay (Office)</p>
+                                    <p id="res-copay" class="text-sm font-semibold text-slate-700">--</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 font-bold uppercase mb-1">OOP Max</p>
+                                    <p id="res-oop" class="text-sm font-semibold text-slate-700">--</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 font-bold uppercase mb-1">Network Status</p>
+                                    <p id="res-network" class="text-sm font-semibold text-green-600">In-Network</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Prior Authorization Warning -->
+                            <div id="auth-warning" class="hidden mt-6 bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg font-semibold">
+                                <i class="fa-solid fa-ban mr-2"></i> 
+                                <span id="auth-message">Warning: Prior Authorization Required</span>
+                                <button onclick="checkAuthStatus()" class="ml-3 text-blue-600 hover:text-blue-700 text-xs font-bold underline">Check Auth Status (EDI 278)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights Panel -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <!-- AI Prediction Card -->
+                        <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-lg text-white p-6 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-10">
+                                <i class="fa-solid fa-brain text-6xl"></i>
+                            </div>
+                            <h4 class="font-bold text-sm uppercase tracking-widest mb-4 border-b border-indigo-400 pb-2">AI Claim Prediction</h4>
+                            
+                            <div class="flex items-center gap-4 mb-2">
+                                <div class="text-4xl font-bold" id="ai-score">98%</div>
+                                <div class="text-xs text-indigo-200 leading-tight">Likelihood of<br>Approval</div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-indigo-900/50 h-2 rounded-full mb-4">
+                                <div id="ai-bar" class="bg-green-400 h-2 rounded-full" style="width: 0%"></div>
+                            </div>
+
+                            <div class="bg-white/10 rounded p-3 text-xs backdrop-blur-sm">
+                                <i class="fa-solid fa-circle-info text-blue-300 mr-1"></i>
+                                <span id="ai-reason">Patient demographics match payer records perfectly.</span>
+                            </div>
+                        </div>
+
+                        <!-- NEW: Patient Liability Estimator -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                            <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2"><i class="fa-solid fa-hand-holding-dollar text-green-500"></i> Patient Liability Estimator</h4>
+                            <div class="flex items-center gap-4 mb-3">
+                                <label for="procedure-cost" class="text-xs text-slate-500 w-1/2">Est. Procedure Cost ($)</label>
+                                <input id="procedure-cost" type="number" value="150.00" step="0.01" class="w-1/2 text-right border border-slate-300 rounded p-2 text-sm">
+                            </div>
+                            <button onclick="calculateLiability()" class="w-full bg-green-100 text-green-700 font-bold py-2 rounded mb-3 hover:bg-green-200 transition-colors">Calculate</button>
+
+                            <div class="border-t border-slate-200 pt-3">
+                                <div class="flex justify-between items-center">
+                                    <p class="text-xs text-slate-500 uppercase font-bold">PATIENT OWES TODAY</p>
+                                    <p id="patient-liability" class="text-2xl font-extrabold text-blue-600">$ --</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bot Action Log -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-48 overflow-y-auto text-xs font-mono">
+                            <p class="text-slate-400 font-bold mb-2">LIVE TRANSACTION LOG</p>
+                            <div id="console-log" class="space-y-1 text-slate-600">
+                                <p><span class="text-blue-500">[SYSTEM]</span> Ready for inquiry...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: CLAIMS STATUS (EDI 276/277) -->
+            <div id="view-claims" class="hidden">
+                <!-- KPI Header -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Total Claims in AR</p>
+                        <p class="text-3xl font-bold text-slate-800 mt-1">142</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Claims > 90 Days</p>
+                        <p class="text-3xl font-bold text-red-600 mt-1">12</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Est. Reimbursement</p>
+                        <p class="text-3xl font-bold text-green-600 mt-1">$45,290</p>
+                    </div>
+                </div>
+
+                <!-- Claims Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <h3 class="font-bold text-slate-700">Active Claims Tracker</h3>
+                        <div class="flex gap-2">
+                            <button class="text-xs bg-white border border-slate-300 px-3 py-1 rounded hover:bg-slate-50">Filter: All</button>
+                            <button id="btn-update-claims" onclick="updateClaimsStatus()" class="text-xs bg-blue-600 text-white border border-blue-600 px-3 py-1 rounded hover:bg-blue-700 transition-colors">Update Status (EDI 276)</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto custom-scroll">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-6 py-3">Claim ID</th>
+                                    <th class="px-6 py-3">Patient</th>
+                                    <th class="px-6 py-3">Payer</th>
+                                    <th class="px-6 py-3 w-1/3">Lifecycle Status</th>
+                                    <th class="px-6 py-3">Days in AR</th>
+                                    <th class="px-6 py-3">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <!-- Row 1 -->
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-001</td>
+                                    <td class="px-6 py-4">Connor, Sarah</td>
+                                    <td class="px-6 py-4">Anthem BCBS</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs font-bold text-blue-600">Adjudication</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: 75%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4" id="days-connor"><span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">45 Days</span></td>
+                                    <td class="px-6 py-4 font-bold">$1,500.00</td>
+                                </tr>
+                                <!-- Row 2 -->
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-042</td>
+                                    <td class="px-6 py-4">Stark, Tony</td>
+                                    <td class="px-6 py-4">Medicare</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs font-bold text-green-600">Pending Payment</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                            <div class="bg-green-500 h-1.5 rounded-full" style="width: 90%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">14 Days</span></td>
+                                    <td class="px-6 py-4 font-bold">$340.00</td>
+                                </tr>
+                                <!-- Row 3 -->
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-089</td>
+                                    <td class="px-6 py-4">Banner, Bruce</td>
+                                    <td class="px-6 py-4">Aetna EPO</td>
+                                    <td class="px-6 py-4" id="status-banner">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-xs font-bold text-slate-500">Payer Received</span>
+                                        </div>
+                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                            <div class="bg-slate-400 h-1.5 rounded-full" style="width: 40%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4"><span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded">5 Days</span></td>
+                                    <td class="px-6 py-4 font-bold">$890.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: AI DENIALS MANAGER -->
+            <div id="view-denials" class="hidden">
+                 <div class="bg-indigo-900 rounded-xl shadow-lg p-6 mb-8 text-white flex justify-between items-center relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h3 class="text-2xl font-bold mb-1">AI Denial Resolution</h3>
+                        <p class="text-indigo-200 text-sm">Prioritizing worklist based on ROI and Win Probability.</p>
+                    </div>
+                    <div class="text-right relative z-10">
+                        <p class="text-3xl font-bold">$12,450</p>
+                        <p class="text-xs text-indigo-300 uppercase">Recoverable Revenue</p>
+                    </div>
+                    <div class="absolute -right-10 -bottom-10 text-9xl text-white opacity-5 transform rotate-12">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                 </div>
+
+                 <div class="grid grid-cols-1 gap-6">
+                    
+                    <!-- Denial Card 1 -->
+                    <div id="card-denial-1" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-center">
+                        <div class="flex-shrink-0 text-center md:text-left">
+                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto md:mx-0">
+                                <span class="font-bold text-red-600 text-lg">CO-16</span>
+                            </div>
+                        </div>
+                        <div class="flex-grow text-center md:text-left">
+                            <h4 class="font-bold text-slate-800 text-lg">Claim/Service Lacks Information</h4>
+                            <p class="text-sm text-slate-500 mb-2">Claim ID: #CLM-776655 • Payer: Anthem PPO</p>
+                            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                                <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">Value: $4,500</span>
+                                <span class="px-2 py-1 bg-red-50 text-red-600 text-xs rounded border border-red-100">Deadline: 15 Days</span>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-64 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-slate-600">AI Win Probability</span>
+                                <span class="text-green-600">92%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 92%"></div>
+                            </div>
+                            <button id="btn-appeal-1" onclick="generateAppeal('CLM-776655')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Appeal
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Denial Card 2 -->
+                    <div id="card-denial-2" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-center opacity-75">
+                        <div class="flex-shrink-0 text-center md:text-left">
+                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto md:mx-0">
+                                <span class="font-bold text-orange-600 text-lg">CO-50</span>
+                            </div>
+                        </div>
+                        <div class="flex-grow text-center md:text-left">
+                            <h4 class="font-bold text-slate-800 text-lg">Not Deemed Medically Necessary</h4>
+                            <p class="text-sm text-slate-500 mb-2">Claim ID: #CLM-332211 • Payer: Medicare</p>
+                            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                                <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">Value: $250</span>
+                                <span class="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded border border-orange-100">Deadline: 45 Days</span>
+                            </div>
+                        </div>
+                        <div class="w-full md:w-64 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-slate-600">AI Win Probability</span>
+                                <span class="text-orange-500">15%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
+                                <div class="bg-orange-500 h-2 rounded-full" style="width: 15%"></div>
+                            </div>
+                            <button id="btn-writeoff-2" onclick="recommendWriteOff('CLM-332211')" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors">
+                                <i class="fa-regular fa-trash-can"></i> Recommend Write-Off
+                            </button>
+                        </div>
+                    </div>
+
+                 </div>
+            </div>
+
+            <!-- APPEAL LETTER MODAL -->
+            <div id="modal-appeal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-enter overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                        <h3 class="font-bold flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Generated Appeal Draft</h3>
+                        <button onclick="closeModal()" class="hover:text-indigo-200"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <div class="p-8 overflow-y-auto custom-scroll bg-slate-50">
+                        <div class="bg-white p-8 shadow border border-slate-200 text-sm font-serif text-slate-800 leading-relaxed">
+                            <p class="mb-4 text-right text-slate-500 text-xs">Generated: <span id="modal-date"></span></p>
+                            
+                            <p class="mb-2"><strong>To:</strong> Anthem Blue Cross PPO<br><strong>Re:</strong> Appeal for Claim #CLM-776655</p>
+                            <p class="mb-6"><strong>Patient:</strong> John Doe (ID: M12345678)</p>
+                            
+                            <p class="mb-4">To Whom It May Concern,</p>
+                            
+                            <p class="mb-4">This letter serves as a formal appeal regarding the denial of the above-referenced claim due to "CO-16: Lack of Information."</p>
+                            
+                            <p class="mb-4">The NexGen AI engine has identified that the Operative Report was requested but not successfully linked in the initial adjudication. Attached to this electronic appeal, please find the complete operative notes and the surgeon's detailed clinical summary supporting the medical necessity of the procedure performed on 10/12/2024.</p>
+                            
+                            <p class="mb-4">Based on your payer guidelines (Section 4.2), this documentation satisfies the requirement for reimbursement.</p>
+                            
+                            <p class="mb-6">We request a re-determination and prompt payment of the allowable amount of $4,500.00.</p>
+                            
+                            <p>Sincerely,</p>
+                            <p class="font-bold">NexGen RCM Automation Agent</p>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-200 bg-white flex justify-end gap-3">
+                        <button onclick="closeModal()" class="px-4 py-2 text-slate-600 text-sm font-bold hover:bg-slate-100 rounded">Edit</button>
+                        <button onclick="submitAppeal()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 rounded shadow-lg shadow-indigo-500/30">Submit Appeal (EDI 277)</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- UX / UTILITY FUNCTIONS ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgColor = 'bg-green-600';
+            let icon = 'fa-check-circle';
+            
+            if (type === 'error') {
+                bgColor = 'bg-red-600';
+                icon = 'fa-circle-xmark';
+            } else if (type === 'warning') {
+                bgColor = 'bg-yellow-600';
+                icon = 'fa-triangle-exclamation';
+            }
+            
+            toast.className = `p-3 rounded-lg shadow-xl text-white ${bgColor} animate-fade-in flex items-center gap-3`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            
+            container.prepend(toast); // show newest on top
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        function logConsole(msg) {
+            const consoleDiv = document.getElementById('console-log');
+            const p = document.createElement('p');
+            p.innerHTML = `<span class="text-green-600">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+            consoleDiv.prepend(p);
+        }
+        
+        // --- NAVIGATION LOGIC ---
+        function switchTab(tabName) {
+            // Hide all views
+            document.getElementById('view-eligibility').classList.add('hidden');
+            document.getElementById('view-claims').classList.add('hidden');
+            document.getElementById('view-denials').classList.add('hidden');
+
+            // Reset Tab Styles (Tailwind classes for active/inactive)
+            const tabs = ['eligibility', 'claims', 'denials'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('nav-' + t);
+                if(t === tabName) {
+                    btn.className = "w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all";
+                    const icon = btn.querySelector('i');
+                    if(icon) {
+                        icon.className = icon.className.replace('text-slate-500', 'text-white').replace('text-purple-400', 'text-white'); // Simplification for demo
+                    }
+                } else {
+                    btn.className = "w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group text-slate-300";
+                    // Restore original colors roughly
+                    const icon = btn.querySelector('i');
+                    if(t === 'denials') icon.className = "fa-solid fa-robot w-6 text-purple-400 group-hover:text-purple-300";
+                    else if (t === 'claims') icon.className = "fa-solid fa-file-invoice-dollar w-6 text-slate-500 group-hover:text-white";
+                    else icon.className = "fa-solid fa-magnifying-glass-chart w-6 text-slate-500 group-hover:text-white";
+                }
+            });
+
+            // Show selected view
+            document.getElementById('view-' + tabName).classList.remove('hidden');
+
+            // Update Header Title
+            const titles = {
+                'eligibility': 'Real-Time Eligibility Verification',
+                'claims': 'Claims Lifecycle Tracker (EDI 276/277)',
+                'denials': 'AI Denials Resolution Manager'
+            };
+            document.getElementById('header-title').innerText = titles[tabName];
+        }
+
+        // --- MOCK DATABASE (EXISTING) ---
+        const MOCK_DB = {
+            "medicare": {
+                name: "Medicare Part A & B",
+                type: "Federal / FFS",
+                deductible: 240.00, // Stored as number for calculation
+                met: 240.00,
+                coinsurance_pct: 20, // New field for calculation
+                copay: 0.00,
+                oop: "N/A",
+                network: "Open Access"
+            },
+            "uhc": {
+                name: "UHC Choice Plus",
+                type: "POS (Point of Service)",
+                deductible: 2000.00,
+                met: 1890.00,
+                coinsurance_pct: 10,
+                copay: 25.00,
+                oop: "$4,500.00",
+                network: "National Choice"
+            },
+            "anthem": {
+                name: "Anthem BlueCross PPO Gold",
+                type: "PPO (Preferred Provider)",
+                deductible: 1500.00,
+                met: 450.00,
+                coinsurance_pct: 20,
+                copay: 35.00,
+                oop: "$5,000.00",
+                network: "BlueCard PPO"
+            },
+            "kaiser": {
+                name: "Kaiser Permanente",
+                type: "HMO (Health Maint. Org)",
+                deductible: 0.00,
+                met: 0.00,
+                coinsurance_pct: 0,
+                copay: 20.00,
+                oop: "$1,500.00",
+                network: "Kaiser Facilities Only"
+            },
+            // Simplified entries for others, ensuring numerical values are present
+            "medicaid": { name: "State Medicaid", type: "HMO", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 3.00, oop: "$0.00", network: "Strict HMO Network" },
+            "aetna": { name: "Aetna Open Access", type: "EPO", deductible: 3000.00, met: 0.00, coinsurance_pct: 0, copay: 50.00, oop: "$6,500.00", network: "Select Network Only" },
+            "cigna": { name: "Cigna LocalPlus", type: "HDHP w/ HSA", deductible: 5000.00, met: 2100.00, coinsurance_pct: 0, copay: 0.00, oop: "$7,000.00", network: "LocalPlus Network" },
+            "humana": { name: "Humana Gold Plus", type: "Medicare Advantage (HMO)", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 10.00, oop: "$3,400.00", network: "Gold Plus HMO" }
+        };
+
+        // --- ELIGIBILITY & SCRUBBER LOGIC ---
+        
+        function prefillDemo() {
+            document.getElementById('member-id').value = "A99887766";
+            document.getElementById('dob').value = "1985-06-15";
+            showToast("Demo data loaded for John Doe.", 'success');
+        }
+        
+        // This function simulates the Prior Authorization check (EDI 278)
+        function checkAuthStatus() {
+            showToast("EDI 278 Request Sent: Checking for Authorization 12345...", 'warning');
+            logConsole("AUTH: Sending EDI 278 transaction for CPT...");
+
+            setTimeout(() => {
+                document.getElementById('auth-message').innerHTML = `
+                    **PRIOR AUTH REQUIRED.** Auth # is 90210. Expires 12/31/2025.
+                `;
+                document.getElementById('auth-warning').classList.remove('bg-yellow-50');
+                document.getElementById('auth-warning').classList.add('bg-orange-50');
+                showToast("Prior Authorization found! Ready for service.", 'success');
+                logConsole("AUTH: Response received. Authorization is valid.");
+            }, 1500);
+        }
+        
+        function runVerification() {
+            const payerKey = document.getElementById('payer-select').value;
+            const memberId = document.getElementById('member-id').value;
+            const selectedCpt = document.getElementById('service-type').value;
+            const btn = document.getElementById('btn-verify');
+            const loader = document.getElementById('loader');
+            const results = document.getElementById('results-panel');
+            const scrubberWarning = document.getElementById('scrubber-warning');
+
+            if (!memberId) {
+                showToast("Please enter a Member ID for verification.", 'error');
+                return;
+            }
+            
+            // --- NEW: CPT Scrubber Simulation ---
+            scrubberWarning.classList.add('hidden'); // Reset warning
+            if (payerKey === 'kaiser' && selectedCpt === '44120') {
+                scrubberWarning.classList.remove('hidden');
+                document.getElementById('scrubber-message').innerText = 
+                    "CPT Scrubber Warning: Kaiser denies 44120 unless performed at a Kaiser Facility. Consult network rules.";
+                showToast("Pre-emptive denial detected by CPT Scrubber!", 'warning');
+                logConsole("SCRUBBER: HIGH RISK CPT/Payer combination detected.");
+                // Prevent verification if scrubber is critical
+                // return; 
+            } else if (payerKey === 'medicare' && selectedCpt === '73721') {
+                 scrubberWarning.classList.remove('hidden');
+                 document.getElementById('scrubber-message').innerText = 
+                    "CPT Scrubber Warning: Medicare requires ordering physician NPI. Ensure field is populated before billing.";
+            }
+
+            // UI Transitions
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            results.classList.add('hidden');
+            loader.classList.remove('hidden');
+            
+            logConsole(`Initiating EDI 270 request to ${payerKey.toUpperCase()}...`);
+
+            // Step 2: Update subtext simulation
+            setTimeout(() => {
+                document.getElementById('loader-subtext').innerText = "Verifying Member Eligibility & Benefits...";
+                logConsole("Connection established. Handshaking...");
+            }, 1000);
+
+            // Step 3: Show Results
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                results.classList.remove('hidden');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+                
+                renderResults(payerKey, memberId, selectedCpt);
+            }, 2500);
+        }
+
+        function renderResults(payerKey, memberId, selectedCpt) {
+            const data = MOCK_DB[payerKey];
+            const isInactive = memberId.toUpperCase().startsWith('Z'); // Simulation Rule
+
+            // Basic Info
+            document.getElementById('res-payer').innerText = data.name;
+            document.getElementById('res-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('res-name').innerText = "Doe, John A.";
+            
+            document.getElementById('auth-warning').classList.add('hidden'); // Reset Auth Warning
+
+            const badge = document.getElementById('status-badge');
+            const aiScore = document.getElementById('ai-score');
+            const aiBar = document.getElementById('ai-bar');
+            const aiReason = document.getElementById('ai-reason');
+            
+            // --- Rendering Accumulators (formatted for display) ---
+            const formatCurrency = (val) => `$${val.toFixed(2)}`;
+            
+            document.getElementById('res-deductible').innerText = formatCurrency(data.deductible);
+            document.getElementById('res-met').innerText = formatCurrency(data.met);
+            document.getElementById('res-coins').innerText = `${data.coinsurance_pct}% after ded.`;
+            document.getElementById('res-copay').innerText = formatCurrency(data.copay);
+            document.getElementById('res-oop').innerText = data.oop;
+            document.getElementById('res-network').innerText = data.network;
+
+            if (isInactive) {
+                // INACTIVE STATE
+                badge.innerText = "INACTIVE";
+                badge.className = "bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200";
+                
+                document.getElementById('res-plantype').innerText = "--"; 
+                aiScore.innerText = "12%";
+                aiBar.style.width = "12%";
+                aiBar.className = "bg-red-500 h-2 rounded-full";
+                aiReason.innerText = "CRITICAL: Coverage terminated. High risk of denial.";
+                logConsole(`Response: INACTIVE. Coverage terminated.`);
+                showToast("Verification Failed: Member ID inactive.", 'error');
+                
+            } else {
+                // ACTIVE STATE
+                badge.innerText = "ACTIVE";
+                badge.className = "bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200";
+
+                document.getElementById('res-plantype').innerText = data.type; 
+                aiScore.innerText = "98%";
+                aiBar.style.width = "98%";
+                aiBar.className = "bg-green-400 h-2 rounded-full";
+                aiReason.innerText = "Clean match. Patient has accumulator data available.";
+                logConsole(`Response: ACTIVE. Data parsed successfully.`);
+                showToast("Eligibility Verified Successfully!", 'success');
+                
+                // --- NEW: Prior Authorization Warning Logic ---
+                if (selectedCpt === '44120' && payerKey !== 'kaiser') { // Surgery requires Auth for non-HMOs
+                    document.getElementById('auth-warning').classList.remove('hidden');
+                    document.getElementById('auth-message').innerHTML = `
+                        **PRIOR AUTH REQUIRED** for CPT 44120. Check status before proceeding.
+                    `;
+                    logConsole("AUTH: Prior Auth required for this CPT. Flagging.");
+                } else {
+                    document.getElementById('auth-warning').classList.add('hidden');
+                }
+            }
+            
+            // Re-calculate liability based on new results
+            calculateLiability();
+        }
+
+        function calculateLiability() {
+            // Get current payer data from the visible results
+            const payerKey = document.getElementById('payer-select').value;
+            const data = MOCK_DB[payerKey];
+            const estCost = parseFloat(document.getElementById('procedure-cost').value || 0);
+            const isInactive = document.getElementById('status-badge').innerText === 'INACTIVE';
+
+            if (isInactive || estCost <= 0) {
+                document.getElementById('patient-liability').innerText = '$ --';
+                return;
+            }
+
+            const totalDeductible = data.deductible;
+            const deductibleMet = data.met;
+            const deductibleRemaining = Math.max(0, totalDeductible - deductibleMet);
+            const copay = data.copay;
+            const coinsurancePct = data.coinsurance_pct / 100;
+            
+            let liability = 0;
+            let remainingCost = estCost;
+            
+            // Step 1: Apply Deductible (if applicable)
+            if (deductibleRemaining > 0) {
+                const appliedToDeductible = Math.min(estCost, deductibleRemaining);
+                liability += appliedToDeductible;
+                remainingCost -= appliedToDeductible;
+            }
+
+            // Step 2: Apply Copay (if deductible is met or waived)
+            // Note: For HDHP plans, copay is often $0 and deductible applies first.
+            // Simplified Rule: Apply copay only if deductible is fully met OR plan is HMO/POS
+            if (remainingCost > 0 && data.type.includes('HMO') || data.type.includes('POS')) {
+                 liability += copay;
+            } else if (remainingCost > 0 && data.type.includes('PPO') && deductibleRemaining === 0) {
+                 liability += copay;
+            }
+
+            // Step 3: Apply Coinsurance to remaining balance
+            if (remainingCost > 0 && coinsurancePct > 0) {
+                liability += remainingCost * coinsurancePct;
+            }
+
+            document.getElementById('patient-liability').innerText = `$${liability.toFixed(2)}`;
+            logConsole(`LIABILITY: Calculated estimate of $${liability.toFixed(2)} based on $${estCost.toFixed(2)} procedure cost.`);
+        }
+
+        function saveToEHR() {
+            const memberId = document.getElementById('member-id').value;
+            showToast(`Eligibility data exported to EHR Patient Chart #${memberId}.`, 'success');
+            logConsole("EHR: Eligibility data package pushed to connected PM/EHR system.");
+        }
+
+        // --- CLAIMS STATUS LOGIC ---
+        function updateClaimsStatus() {
+            const btn = document.getElementById('btn-update-claims');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending 276...';
+            logConsole("Initiating Batch EDI 276 Claim Status Request...");
+            showToast("Sending EDI 276 status request...", 'warning');
+
+            setTimeout(() => {
+                // Update UI
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }, 2000);
+
+                // Update specific row (Bruce Banner)
+                const bannerRow = document.getElementById('status-banner');
+                if(bannerRow) {
+                    bannerRow.innerHTML = `
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold text-blue-600">Adjudication</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: 75%"></div>
+                        </div>
+                    `;
+                    logConsole("EDI 277 Response: Claim #CLM-24-089 (Banner) status updated to Adjudication.");
+                }
+                
+                // Update Row 1 (Sarah Connor) - Update days in AR
+                const connorDays = document.getElementById('days-connor');
+                if(connorDays) {
+                    connorDays.innerHTML = '<span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">46 Days</span>';
+                     logConsole("EDI 277 Response: Claim #CLM-24-001 (Connor) aged to 46 Days.");
+                }
+                showToast("Claims statuses successfully updated!", 'success');
+
+            }, 1500);
+        }
+
+        // --- AI DENIALS LOGIC ---
+        function generateAppeal(claimId) {
+            const btn = document.getElementById('btn-appeal-1');
+            const originalText = btn.innerHTML;
+            
+            // 1. Loading State
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Drafting...';
+            
+            // 2. Simulate AI Delay
+            setTimeout(() => {
+                // 3. Open Modal
+                const modal = document.getElementById('modal-appeal');
+                modal.classList.remove('hidden');
+                document.getElementById('modal-date').innerText = new Date().toLocaleDateString();
+                
+                // 4. Reset Button
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                logConsole(`AI Generated Appeal Letter for #${claimId} based on CO-16 logic.`);
+                showToast("Appeal letter draft ready for review.", 'success');
+            }, 1200);
+        }
+
+        function closeModal() {
+            document.getElementById('modal-appeal').classList.add('hidden');
+        }
+
+        function submitAppeal() {
+            closeModal();
+            // Optional: Visually remove the card or show success
+            const card = document.getElementById('card-denial-1');
+            card.innerHTML = `
+                <div class="text-center w-full py-10">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-check text-2xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-700">Appeal Submitted</h3>
+                    <p class="text-slate-500 text-sm">Via EDI 277 (Claim Attachment)</p>
+                </div>
+            `;
+            logConsole("Appeal Package (Letter + Operative Report) successfully transmitted to Payer.");
+            showToast("Appeal for CLM-776655 submitted successfully!", 'success');
+        }
+
+        function recommendWriteOff(claimId) {
+            const btn = document.getElementById('btn-writeoff-2');
+            
+            // 1. Loading State
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Calculating...';
+            
+            // 2. Simulate Delay
+            setTimeout(() => {
+                // 3. Update UI to "Written Off" state
+                const card = document.getElementById('card-denial-2');
+                card.classList.add('grayscale'); // visual effect
+                card.classList.add('opacity-50');
+                
+                btn.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Moved to Ledger';
+                btn.className = "w-full bg-slate-100 text-slate-400 text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 cursor-not-allowed";
+                
+                logConsole(`Claim #${claimId} moved to Write-Off Ledger. Revenue impact: -$250.00.`);
+                showToast(`Denial ${claimId} successfully written off.`, 'error'); // Denials are bad, so error/red toast fits
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
