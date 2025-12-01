@@ -1694,6 +1694,19 @@
             history.scrollTop = history.scrollHeight;
         }
 
+        // --- ADDED MISSING FUNCTIONS ---
+        function openArchModal() {
+            const m = document.getElementById('modal-arch');
+            if(m) m.classList.remove('hidden');
+        }
+        function closeArchModal() {
+            const m = document.getElementById('modal-arch');
+            if(m) m.classList.add('hidden');
+        }
+        function openSettingsModal() {
+            showToast("Settings panel is under construction.", "warning");
+        }
+
         // Init
         togglePrivacy(); 
     </script>
