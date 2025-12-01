@@ -1579,7 +1579,48 @@
             if(dob) dob.value = "1985-06-15"; 
             showToast("Demo data loaded.", 'success'); 
         }
-        function runVerification() { showToast("Use 'Run Automation' in the sidebar.", "warning"); }
+        async function runVerification() {
+            const idInput = document.getElementById('member-id');
+            const payerInput = document.getElementById('payer-select');
+            const serviceInput = document.getElementById('service-type');
+            
+            if(!idInput || !idInput.value) { showToast("Please enter a Member ID.", "error"); return; }
+
+            const btn = document.getElementById('btn-verify');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+            btn.disabled = true;
+
+            // UI Reset
+            const loader = document.getElementById('loader');
+            const results = document.getElementById('results-panel');
+            if(loader) loader.classList.remove('hidden');
+            if(results) results.classList.add('hidden');
+
+            // Simulate Network Call
+            logConsole(`Manual Eligibility Check initiated for ${idInput.value}...`);
+            await delay(1500);
+
+            // Log Technical Streams
+            logEDI(`ISA*00*...NM1*IL*1*${idInput.value}...`, true);
+            logFHIR({ resourceType: "Coverage", id: idInput.value, status: "active" }, true);
+            logNetworkRequest("POST", "https://gateway.availity.com/api/v1/eligibility", 200, { memberId: idInput.value, payer: payerInput.value });
+
+            // Render
+            renderResults(payerInput.value, idInput.value, serviceInput.value, false);
+
+            if(loader) loader.classList.add('hidden');
+            if(results) results.classList.remove('hidden');
+            
+            // Log Response
+            const isInactive = idInput.value.startsWith('Z');
+            const status = isInactive ? 'INACTIVE' : 'ACTIVE';
+            logEDI(`ISA*00*...EB*${isInactive?'6':'1'}*...MSG*${status}`, false);
+            showToast(`Eligibility Check Complete: ${status}`, isInactive ? "error" : "success");
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
         function saveToEHR() { showToast("Saved to EHR.", "success"); }
         function calculateLiability() {}
         function checkAuthStatus() { showToast("Checking Auth...", "warning"); }
