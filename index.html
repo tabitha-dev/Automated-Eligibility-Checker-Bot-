@@ -801,6 +801,53 @@
             </div>
 
         </div>
+
+        <!-- ARCHITECTURE MODAL -->
+            <div id="modal-arch" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl modal-enter overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="bg-slate-900 p-6 text-white flex justify-between items-center">
+                        <h3 class="text-2xl font-bold flex items-center gap-2"><i class="fa-solid fa-network-wired"></i> System Architecture</h3>
+                        <button onclick="closeArchModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-8 bg-slate-50 overflow-y-auto custom-scroll">
+                        <div class="flex flex-col items-center space-y-4">
+                            <!-- Client -->
+                            <div class="p-4 bg-white border border-slate-200 rounded shadow text-center w-64">
+                                <p class="font-bold text-slate-800">Client (Browser)</p>
+                                <p class="text-xs text-slate-500">React / HTML5 / Tailwind</p>
+                            </div>
+                            <i class="fa-solid fa-arrow-down text-slate-400"></i>
+                            <!-- API Gateway -->
+                            <div class="p-4 bg-indigo-50 border border-indigo-200 rounded shadow text-center w-64">
+                                <p class="font-bold text-indigo-800">API Gateway</p>
+                                <p class="text-xs text-indigo-500">FastAPI / Node.js</p>
+                            </div>
+                            <div class="flex gap-4 justify-center w-full">
+                                <i class="fa-solid fa-arrow-down text-slate-400 -rotate-45"></i>
+                                <i class="fa-solid fa-arrow-down text-slate-400 rotate-45"></i>
+                            </div>
+                            <div class="flex gap-8">
+                                <!-- Service 1 -->
+                                <div class="p-4 bg-green-50 border border-green-200 rounded shadow text-center w-48">
+                                    <p class="font-bold text-green-800">Eligibility Bot</p>
+                                    <p class="text-xs text-green-600">Python Selenium WebDriver</p>
+                                </div>
+                                <!-- Service 2 -->
+                                <div class="p-4 bg-blue-50 border border-blue-200 rounded shadow text-center w-48">
+                                    <p class="font-bold text-blue-800">EDI Translator</p>
+                                    <p class="text-xs text-blue-600">X12 Parser / FHIR Converter</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-down text-slate-400"></i>
+                            <!-- Payer -->
+                            <div class="p-4 bg-slate-800 border border-slate-900 rounded shadow text-center w-64 text-white">
+                                <p class="font-bold">Payer Portals</p>
+                                <p class="text-xs text-slate-400">Availity / Optum / CMS</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         
         <!-- FOOTER (NEW) -->
         <footer class="fixed bottom-0 right-0 p-4 text-right bg-white/80 backdrop-blur-sm border-t border-slate-200 rounded-tl-xl shadow-lg z-40 text-xs">
