@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexGen RCM | AI Eligibility Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet"> 
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> 
     <style>
         body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-serif { font-family: 'Merriweather', serif; }
+        .font-signature { font-family: 'Dancing Script', cursive; }
+
         .glass-panel {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -21,66 +30,141 @@
             70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
             100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
-        .loader-bar {
-            height: 4px;
+        
+        /* Privacy Blur Class for HIPAA - FIXED with !important */
+        .phi-masked {
+            color: transparent !important;
+            text-shadow: 0 0 10px rgba(0,0,0,0.7);
+            user-select: none;
+            cursor: not-allowed;
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        
+        /* Custom Scroll */
+        .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* Animations */
+        .modal-enter { animation: modalFadeIn 0.3s ease-out forwards; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .typing-cursor { border-right: 2px solid #3b82f6; animation: blink 0.75s step-end infinite; }
+        @keyframes blink { from, to { border-color: transparent } 50% { border-color: #3b82f6; } }
+
+        /* Copilot Chat Animations */
+        .chat-enter { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Audio Wave Animation */
+        .bar {
+            width: 4px;
+            background: #4F46E5;
+            animation: sound 0ms -800ms linear infinite alternate;
+        }
+        @keyframes sound {
+            0% { opacity: .35; height: 3px; }
+            100% { opacity: 1; height: 16px; }
+        }
+
+        /* News Ticker */
+        .ticker-wrap {
             width: 100%;
-            background-color: #e2e8f0;
             overflow: hidden;
+            background-color: #1e293b;
+            padding-left: 100%;
+            box-sizing: content-box;
         }
-        .loader-bar-value {
-            width: 100%;
-            height: 100%;
-            background-color: #3b82f6;
-            animation: indeterminate 1.5s infinite linear;
-            transform-origin: 0% 50%;
+        .ticker {
+            display: inline-block;
+            height: 2rem;
+            line-height: 2rem;
+            white-space: nowrap;
+            padding-right: 100%;
+            box-sizing: content-box;
+            animation: ticker 30s linear infinite;
         }
-        @keyframes indeterminate {
-            0% { transform:  translateX(0) scaleX(0); }
-            40% { transform:  translateX(0) scaleX(0.4); }
-            100% { transform:  translateX(100%) scaleX(0.5); }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
         }
-        /* Custom scrollbar for table containers */
-        .custom-scroll::-webkit-scrollbar {
-            height: 8px;
-            width: 8px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-            background: #f1f5f9; 
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-        /* Modal Animation */
-        .modal-enter {
-            animation: modalFadeIn 0.3s ease-out forwards;
-        }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+
+        /* Login Screen Gradient */
+        .login-bg {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
         }
     </style>
 </head>
 <body class="bg-slate-100 h-screen flex overflow-hidden">
 
-    <!-- Toast Container (New Feature: UX Polish) -->
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col gap-2"></div>
+
+    <!-- LOGIN SCREEN OVERLAY (Z-Index 50) -->
+    <div id="login-screen" class="fixed inset-0 z-50 login-bg flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center transform transition-all duration-500 scale-100 opacity-100" id="login-card">
+            <div class="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-900/20">
+                <i class="fa-solid fa-dna text-3xl text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">NexGen RCM Intelligence</h1>
+            <p class="text-slate-500 text-sm mb-8">Secure Provider Access Portal</p>
+
+            <button onclick="performLogin()" id="btn-login" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-lg shadow-lg transition-all flex items-center justify-center gap-3 group">
+                <i class="fa-solid fa-shield-halved group-hover:scale-110 transition-transform"></i>
+                Sign In via SSO
+            </button>
+            
+            <div class="mt-6 flex justify-between text-xs text-slate-400 border-t border-slate-100 pt-4">
+                <span><i class="fa-solid fa-lock mr-1"></i> 256-Bit Encryption</span>
+                <span><i class="fa-solid fa-building-shield mr-1"></i> HIPAA Compliant</span>
+            </div>
+        </div>
+    </div>
     
     <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col shadow-2xl z-10">
-        <div class="p-6 flex items-center gap-3 text-white border-b border-slate-800">
-            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i class="fa-solid fa-dna text-white"></i>
+    <aside class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col shadow-2xl z-10 relative overflow-y-auto custom-scroll">
+        <!-- HIPAA Header -->
+        <div class="p-6 text-white border-b border-slate-800 bg-slate-950">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-shield-halved text-white"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-tight block">NexGen<span class="text-blue-400">Secure</span></span>
+                </div>
             </div>
-            <span class="font-bold text-lg tracking-tight">NexGen<span class="text-blue-400">AI</span></span>
+            <!-- Connection Status Indicators -->
+            <div class="space-y-1 pl-1">
+                <div class="flex items-center gap-2 text-[10px] text-emerald-400">
+                    <span class="flex h-2 w-2 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    EHR: Connected (Epic)
+                </div>
+                <div class="flex items-center gap-2 text-[10px] text-blue-400">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    Gateway: Online
+                </div>
+            </div>
         </div>
         
-        <nav class="flex-grow p-4 space-y-2">
-            <button onclick="switchTab('eligibility')" id="nav-eligibility" class="w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all">
-                <i class="fa-solid fa-magnifying-glass-chart w-6"></i> Eligibility Check
+        <nav class="p-4 space-y-2">
+            <button onclick="switchTab('coding')" id="nav-coding" class="w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all">
+                <i class="fa-solid fa-file-medical w-6"></i> AI Auto-Coder
+            </button>
+            <button onclick="switchTab('eligibility')" id="nav-eligibility" class="w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group">
+                <i class="fa-solid fa-magnifying-glass-chart w-6 text-slate-500 group-hover:text-white"></i> Eligibility Check
+            </button>
+            <button onclick="switchTab('voice')" id="nav-voice" class="w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group">
+                <i class="fa-solid fa-headset w-6 text-pink-400 group-hover:text-pink-300"></i> Voice AI Agent
             </button>
             <button onclick="switchTab('claims')" id="nav-claims" class="w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group">
                 <i class="fa-solid fa-file-invoice-dollar w-6 text-slate-500 group-hover:text-white"></i> Claims Status
@@ -90,39 +174,212 @@
             </button>
         </nav>
 
-        <div class="p-4 border-t border-slate-800">
-            <div class="bg-slate-800 rounded-lg p-3 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-green-400 to-blue-500"></div>
+        <!-- PRIMARY ACTION: Run Automation (Moved Here for Visibility) -->
+        <div class="px-4 pb-4">
+            <button onclick="startActiveSimulation()" id="btn-auto-pilot" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-3 px-4 rounded shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-2 transition-all transform hover:scale-105 active:scale-95 border border-indigo-400/30">
+                <i class="fa-solid fa-robot fa-bounce"></i> Run Automation
+            </button>
+            <div class="flex justify-between text-[9px] text-slate-500 mt-2 px-1">
+                <span>Context-Aware Bot</span>
+                <span class="font-mono border border-slate-700 rounded px-1 text-slate-400">Ctrl + Enter</span>
+            </div>
+        </div>
+
+        <!-- Spacer to push rest to bottom -->
+        <div class="flex-grow"></div>
+
+        <!-- RECRUITER BAIT: Architecture & DevTools -->
+        <div class="px-4 pb-2 space-y-2">
+            <button onclick="toggleDevTools()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold py-2 px-3 rounded border border-slate-700 flex items-center justify-center gap-2 transition-colors">
+                <i class="fa-solid fa-terminal"></i> Developer Mode
+            </button>
+            <button onclick="openArchModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 px-3 rounded border border-slate-700 flex items-center justify-center gap-2 transition-colors">
+                <i class="fa-solid fa-network-wired"></i> System Architecture
+            </button>
+        </div>
+
+        <!-- Payer Status Dashboard -->
+        <div class="px-4 py-3 bg-slate-950 border-t border-slate-800">
+            <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Payer Connectivity</p>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between items-center">
+                    <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Medicare</span>
+                    <span class="font-mono text-green-500">45ms</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-green-500"></div> Anthem</span>
+                    <span class="font-mono text-green-500">120ms</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-yellow-500"></div> UHC</span>
+                    <span class="font-mono text-yellow-500">890ms</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Config Area -->
+        <div class="p-4 bg-slate-800/50 border-t border-slate-800">
+            <!-- Privacy Shield -->
+            <div class="flex items-center justify-between mb-3 px-1">
+                <span class="text-xs font-semibold text-slate-300 flex items-center gap-2"><i class="fa-solid fa-eye-slash text-slate-500"></i> Mask PHI</span>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                    <input type="checkbox" name="toggle" id="privacy-toggle" onclick="togglePrivacy()" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300"/>
+                    <label for="privacy-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-600 cursor-pointer transition-colors duration-300"></label>
+                </div>
+            </div>
+
+            <!-- Turbo Mode -->
+            <div class="flex items-center justify-between mb-2 px-1">
+                <span class="text-xs font-semibold text-slate-400">Turbo Sim</span>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                    <input type="checkbox" name="toggle" id="turbo-toggle" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300"/>
+                    <label for="turbo-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-600 cursor-pointer transition-colors duration-300"></label>
+                </div>
+            </div>
+            
+            <button onclick="openSettingsModal()" class="w-full text-center text-[10px] text-slate-500 hover:text-white mt-2 transition-colors">
+                <i class="fa-solid fa-gear"></i> Advanced Settings
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="p-4 bg-slate-950 border-t border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-green-400 to-blue-500 border-2 border-slate-800"></div>
                 <div>
-                    <p class="text-xs text-slate-400">Logged in as</p>
-                    <p class="text-sm font-semibold text-white">Bot_Admin_01</p>
+                    <p class="text-xs text-slate-400">Bot_Admin_01</p>
+                    <p class="text-[10px] font-mono text-green-500" id="session-timer">Session: 14:59</p>
                 </div>
             </div>
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-grow flex flex-col relative overflow-y-auto">
-        <!-- Top Header -->
-        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 shadow-sm">
-            <h2 id="header-title" class="text-slate-700 font-semibold text-lg">Real-Time Eligibility Verification</h2>
-            <div class="flex items-center gap-4">
-                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200">
-                    <i class="fa-solid fa-circle text-[8px] mr-1 align-middle"></i> SYSTEM ONLINE
-                </span>
+    <main class="flex-grow flex flex-col relative overflow-y-auto bg-slate-50">
+        <!-- Top Header & Ticker -->
+        <div class="bg-slate-900 border-b border-slate-800">
+            <div class="ticker-wrap">
+                <div class="ticker text-xs font-mono text-slate-400">
+                    <span class="mr-8"><i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-2"></i>ANTHEM: Scheduled Maintenance Sunday 2AM-4AM EST</span>
+                    <span class="mr-8"><i class="fa-solid fa-info-circle text-blue-400 mr-2"></i>MEDICARE: 2025 Fee Schedule Update effective Jan 1st</span>
+                    <span class="mr-8"><i class="fa-solid fa-check-circle text-green-500 mr-2"></i>UHC: Real-time Adjudication API (v2) is Online</span>
+                    <span class="mr-8"><i class="fa-solid fa-bolt text-purple-400 mr-2"></i>NEXGEN AI: Model v4.2 deployed with enhanced SDoH detection</span>
+                </div>
+            </div>
+        </div>
+
+        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 shadow-sm sticky top-0 z-20">
+            <h2 id="header-title" class="text-slate-700 font-semibold text-lg">AI Clinical Coding Assistant</h2>
+            
+            <!-- Compliance Banner -->
+            <div class="flex items-center gap-6">
+                <div id="phi-warning" class="hidden flex items-center gap-2 text-[10px] font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-200 animate-pulse">
+                    <i class="fa-solid fa-lock"></i> PHI VISIBLE - DO NOT SHARE
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Simulation Overlay Indicator -->
+                    <div id="bot-status" class="hidden flex items-center gap-2 text-xs font-mono text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        <span id="bot-counter-text">BOT ACTIVE</span>
+                    </div>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200">
+                        <i class="fa-solid fa-server text-[8px] mr-1"></i> 256-BIT ENCRYPTED
+                    </span>
+                </div>
             </div>
         </header>
 
         <!-- Content Body -->
-        <div class="p-8 max-w-6xl mx-auto w-full relative">
+        <div class="p-8 max-w-7xl mx-auto w-full relative pb-64"> <!-- Added Padding Bottom for DevTools -->
+            
+            <!-- VIEW 0: AI AUTO-CODER (NLP) -->
+            <div id="view-coding" class="block animate-fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Input Panel -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-full">
+                        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700"><i class="fa-solid fa-user-doctor mr-2 text-blue-500"></i>Clinical Documentation</h3>
+                            <button onclick="loadSampleNote()" class="text-xs text-blue-500 hover:underline">Load Sample Note</button>
+                        </div>
+                        <div class="p-6">
+                            <!-- NEW: OCR Drop Zone -->
+                            <div onclick="triggerOCR()" class="border-2 border-dashed border-slate-300 rounded-lg p-6 mb-4 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                                <i class="fa-solid fa-file-pdf text-slate-400 text-2xl mb-2"></i>
+                                <p class="text-sm text-slate-600 font-bold">Drag & Drop Fax/PDF</p>
+                                <p class="text-xs text-slate-400">or click to scan via OCR</p>
+                            </div>
+
+                            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Physician's Dictation (Unstructured)</label>
+                            <textarea id="clinical-notes" class="w-full h-48 p-4 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-sm leading-relaxed resize-none" placeholder="Paste clinical notes here..."></textarea>
+                            <button onclick="runNLP()" class="w-full mt-4 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded shadow-lg transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-microchip"></i> Analyze with Medical NLP
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Output Panel -->
+                    <div class="space-y-6">
+                        <!-- AI Analysis Result -->
+                        <div id="nlp-results" class="hidden bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden relative">
+                            <div class="absolute top-0 right-0 p-4 opacity-5 text-indigo-600">
+                                <i class="fa-solid fa-brain text-8xl"></i>
+                            </div>
+                            <div class="bg-indigo-600 px-6 py-4 border-b border-indigo-700 text-white">
+                                <h3 class="font-bold"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Extracted Coding</h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <p class="text-xs text-slate-400 uppercase font-bold mb-1">Primary Diagnosis (ICD-10)</p>
+                                    <div class="flex items-center gap-3">
+                                        <span id="extracted-icd" class="text-xl font-bold text-slate-800">--</span>
+                                        <span id="extracted-icd-desc" class="text-sm text-slate-500 italic">--</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 uppercase font-bold mb-1">Procedure (CPT)</p>
+                                    <div class="flex items-center gap-3">
+                                        <span id="extracted-cpt" class="text-xl font-bold text-slate-800">--</span>
+                                        <span id="extracted-cpt-desc" class="text-sm text-slate-500 italic">--</span>
+                                    </div>
+                                </div>
+                                <div class="pt-4 border-t border-slate-100 mt-4">
+                                    <p class="text-xs text-slate-400 uppercase font-bold mb-2">Confidence Score</p>
+                                    <div class="w-full bg-slate-100 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 94%"></div>
+                                    </div>
+                                    <p class="text-right text-xs text-green-600 font-bold mt-1">94% Accuracy</p>
+                                </div>
+                                <button onclick="transferToEligibility()" class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded shadow transition-all flex items-center justify-center gap-2">
+                                    Start Eligibility Check <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Compliance Card -->
+                        <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-blue-800 text-xs">
+                            <p class="font-bold mb-1"><i class="fa-solid fa-lock"></i> HIPAA Compliance Note</p>
+                            <p class="opacity-80">All data displayed is processed locally. Audit logs (45 CFR § 164.312(b)) are generated for every query. PHI Masking is enabled by default.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <!-- VIEW 1: ELIGIBILITY CHECK -->
-            <div id="view-eligibility" class="block animate-fade-in">
+            <div id="view-eligibility" class="hidden animate-fade-in">
                 <!-- Search Panel -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
                     <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="font-bold text-slate-700"><i class="fa-solid fa-sliders mr-2 text-blue-500"></i>Check Parameters</h3>
-                        <button onclick="prefillDemo()" class="text-xs text-blue-500 hover:underline">Auto-Fill Demo Data</button>
+                        <div class="flex gap-4">
+                            <!-- INTEGRATION BUTTON -->
+                            <button onclick="fetchFromEHR()" class="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded font-bold hover:bg-emerald-100 transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-download"></i> Import from EHR (FHIR)
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -132,13 +389,13 @@
                             <div class="relative">
                                 <select id="payer-select" class="block appearance-none w-full bg-slate-50 border border-slate-300 text-slate-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
                                     <option value="medicare">Medicare (CMS)</option>
-                                    <option value="medicaid">Medicaid (State)</option>
-                                    <option value="uhc">UnitedHealthcare (UHC)</option>
                                     <option value="anthem">Elevance (Anthem BCBS)</option>
+                                    <option value="uhc">UnitedHealthcare (UHC)</option>
+                                    <option value="kaiser">Kaiser Permanente</option>
                                     <option value="aetna">Aetna (CVS Health)</option>
                                     <option value="cigna">Cigna Group</option>
-                                    <option value="kaiser">Kaiser Permanente</option>
                                     <option value="humana">Humana</option>
+                                    <option value="medicaid">Medicaid (State)</option>
                                 </select>
                                 <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
                                     <i class="fa-solid fa-chevron-down text-xs"></i>
@@ -149,13 +406,13 @@
                         <!-- Member ID -->
                         <div class="col-span-1 md:col-span-2">
                             <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Member ID / MBI</label>
-                            <input id="member-id" type="text" placeholder="Enter ID..." class="appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
+                            <input id="member-id" type="text" placeholder="Enter ID..." class="phi-target appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
                         </div>
 
                         <!-- DOB -->
                         <div class="col-span-1">
                             <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Date of Birth</label>
-                            <input id="dob" type="date" class="appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
+                            <input id="dob" type="date" class="phi-target appearance-none block w-full bg-slate-50 text-slate-700 border border-slate-300 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 transition-colors">
                         </div>
 
                         <!-- Service Type (Updated with CPT) -->
@@ -197,14 +454,14 @@
 
                 <!-- Results Panel -->
                 <div id="results-panel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
-                    
                     <!-- Main Coverage Card -->
                     <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                             <h3 class="font-bold text-slate-700">Coverage Details</h3>
                             <div class="flex items-center gap-3">
-                                <button onclick="saveToEHR()" class="text-xs text-slate-500 hover:text-blue-600 transition-colors hidden md:block">
-                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Save to EHR
+                                <!-- INTEGRATION BUTTON -->
+                                <button onclick="saveToEHR()" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-2 mr-2">
+                                    <i class="fa-solid fa-upload"></i> Sync to EHR
                                 </button>
                                 <span id="status-badge" class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs font-bold">PENDING</span>
                             </div>
@@ -212,7 +469,8 @@
                         <div class="p-6">
                             <div class="flex items-start justify-between mb-6">
                                 <div>
-                                    <h2 id="res-name" class="text-2xl font-bold text-slate-800">--</h2>
+                                    <!-- PHI SENSITIVE AREA -->
+                                    <h2 id="res-name" class="phi-target text-2xl font-bold text-slate-800 phi-masked">--</h2>
                                     <p id="res-payer" class="text-slate-500 text-sm">--</p>
                                 </div>
                                 <div class="text-right">
@@ -220,14 +478,12 @@
                                     <p id="res-date" class="font-semibold text-slate-700">--</p>
                                 </div>
                             </div>
-
+                            <!-- Grids for deductibles etc. -->
                             <div class="grid grid-cols-2 gap-y-6 gap-x-4">
-                                <!-- Plan Type Field -->
                                 <div class="col-span-2 md:col-span-1 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
                                     <p class="text-xs text-indigo-500 font-bold uppercase mb-1">Plan Structure</p>
                                     <p id="res-plantype" class="text-lg font-bold text-slate-800">--</p>
                                 </div>
-                                
                                 <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <p class="text-xs text-blue-500 font-bold uppercase mb-1">Deductible (Individual)</p>
                                     <p id="res-deductible" class="text-xl font-bold text-slate-800">--</p>
@@ -254,63 +510,167 @@
                                 </div>
                             </div>
                             
-                            <!-- Prior Authorization Warning -->
                             <div id="auth-warning" class="hidden mt-6 bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg font-semibold">
                                 <i class="fa-solid fa-ban mr-2"></i> 
                                 <span id="auth-message">Warning: Prior Authorization Required</span>
-                                <button onclick="checkAuthStatus()" class="ml-3 text-blue-600 hover:text-blue-700 text-xs font-bold underline">Check Auth Status (EDI 278)</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- AI Insights Panel -->
+                    <!-- Enhanced AI & Patient 360 Panel -->
                     <div class="lg:col-span-1 space-y-6">
-                        <!-- AI Prediction Card -->
+                        
+                        <!-- NEW: Patient 360 Intelligence -->
                         <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl shadow-lg text-white p-6 relative overflow-hidden">
                             <div class="absolute top-0 right-0 p-4 opacity-10">
                                 <i class="fa-solid fa-brain text-6xl"></i>
                             </div>
-                            <h4 class="font-bold text-sm uppercase tracking-widest mb-4 border-b border-indigo-400 pb-2">AI Claim Prediction</h4>
+                            <h4 class="font-bold text-sm uppercase tracking-widest mb-4 border-b border-indigo-400 pb-2">Patient 360 AI™</h4>
                             
-                            <div class="flex items-center gap-4 mb-2">
-                                <div class="text-4xl font-bold" id="ai-score">98%</div>
-                                <div class="text-xs text-indigo-200 leading-tight">Likelihood of<br>Approval</div>
-                            </div>
-                            
-                            <!-- Progress Bar -->
-                            <div class="w-full bg-indigo-900/50 h-2 rounded-full mb-4">
-                                <div id="ai-bar" class="bg-green-400 h-2 rounded-full" style="width: 0%"></div>
-                            </div>
-
-                            <div class="bg-white/10 rounded p-3 text-xs backdrop-blur-sm">
-                                <i class="fa-solid fa-circle-info text-blue-300 mr-1"></i>
-                                <span id="ai-reason">Patient demographics match payer records perfectly.</span>
-                            </div>
-                        </div>
-
-                        <!-- NEW: Patient Liability Estimator -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                            <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2"><i class="fa-solid fa-hand-holding-dollar text-green-500"></i> Patient Liability Estimator</h4>
-                            <div class="flex items-center gap-4 mb-3">
-                                <label for="procedure-cost" class="text-xs text-slate-500 w-1/2">Est. Procedure Cost ($)</label>
-                                <input id="procedure-cost" type="number" value="150.00" step="0.01" class="w-1/2 text-right border border-slate-300 rounded p-2 text-sm">
-                            </div>
-                            <button onclick="calculateLiability()" class="w-full bg-green-100 text-green-700 font-bold py-2 rounded mb-3 hover:bg-green-200 transition-colors">Calculate</button>
-
-                            <div class="border-t border-slate-200 pt-3">
-                                <div class="flex justify-between items-center">
-                                    <p class="text-xs text-slate-500 uppercase font-bold">PATIENT OWES TODAY</p>
-                                    <p id="patient-liability" class="text-2xl font-extrabold text-blue-600">$ --</p>
+                            <!-- RAF Score (Value Based Care) -->
+                            <div class="flex justify-between items-end mb-4">
+                                <div>
+                                    <p class="text-xs text-indigo-200">Risk Adjustment Factor</p>
+                                    <p class="text-2xl font-bold" id="ai-raf">--</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-indigo-200">Win Probability</p>
+                                    <p class="text-2xl font-bold text-green-300" id="ai-score">--</p>
                                 </div>
                             </div>
+
+                            <!-- NEW: Propensity to Pay -->
+                            <div class="bg-black/20 rounded p-3 mb-4">
+                                <div class="flex justify-between items-center mb-1">
+                                    <p class="text-[10px] uppercase font-bold text-indigo-300">Propensity to Pay</p>
+                                    <p id="p2p-score" class="text-xs font-bold text-green-300">High</p>
+                                </div>
+                                <div class="w-full bg-indigo-900 rounded-full h-1.5">
+                                    <div id="p2p-bar" class="bg-green-400 h-1.5 rounded-full" style="width: 85%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Care Gaps (HEDIS) -->
+                            <div class="mb-4">
+                                <p class="text-[10px] uppercase font-bold text-indigo-300 mb-1">Open Care Gaps (HEDIS)</p>
+                                <div id="care-gaps-list" class="flex flex-wrap gap-2">
+                                    <span class="text-xs bg-white/10 px-2 py-1 rounded">--</span>
+                                </div>
+                            </div>
+
+                            <!-- SDoH Flags -->
+                            <div class="mb-4">
+                                <p class="text-[10px] uppercase font-bold text-indigo-300 mb-1">SDoH Flags</p>
+                                <div id="sdoh-list" class="flex flex-wrap gap-2">
+                                    <span class="text-xs bg-white/10 px-2 py-1 rounded">--</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="space-y-2">
+                                <button onclick="generateGFE()" class="w-full bg-white text-indigo-600 text-xs font-bold py-2 rounded shadow hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-file-invoice"></i> Generate GFE (No Surprises Act)
+                                </button>
+                                <button onclick="generatePaymentLink()" class="w-full bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 rounded shadow transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-qrcode"></i> Generate Payment Link (SMS)
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Bot Action Log -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-48 overflow-y-auto text-xs font-mono">
-                            <p class="text-slate-400 font-bold mb-2">LIVE TRANSACTION LOG</p>
+                        <!-- Logs -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-32 overflow-y-auto text-xs font-mono custom-scroll">
+                            <p class="text-slate-400 font-bold mb-2 uppercase tracking-wide border-b border-slate-100 pb-1">Audit Trail & Logs</p>
                             <div id="console-log" class="space-y-1 text-slate-600">
-                                <p><span class="text-blue-500">[SYSTEM]</span> Ready for inquiry...</p>
+                                <p><span class="text-blue-500">[SYSTEM]</span> Ready...</p>
                             </div>
+                        </div>
+                        <div class="bg-slate-900 rounded-xl shadow-lg border border-slate-800 p-4 h-32 overflow-y-auto text-[10px] font-mono custom-scroll relative">
+                            <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-1">
+                                <p class="text-green-400 font-bold uppercase tracking-wide flex items-center">
+                                    <i class="fa-solid fa-network-wired mr-2"></i> Stream
+                                </p>
+                                <div class="flex gap-2 text-[9px] font-bold">
+                                    <button id="tab-edi" onclick="switchStream('edi')" class="text-white bg-slate-700 px-2 py-1 rounded">EDI X12</button>
+                                    <button id="tab-fhir" onclick="switchStream('fhir')" class="text-slate-500 hover:text-white px-2 py-1 rounded">FHIR JSON</button>
+                                </div>
+                            </div>
+                            <!-- Two containers for the two streams -->
+                            <div id="edi-stream" class="space-y-1 text-slate-400 break-all block">
+                                <p class="opacity-50">// EDI X12 Stream initialized...</p>
+                            </div>
+                            <div id="fhir-stream" class="space-y-1 text-blue-300 break-all hidden">
+                                <p class="opacity-50">// FHIR R4 Bundle initialized...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW VIEW: VOICE AI AGENT -->
+            <div id="view-voice" class="hidden animate-fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px]">
+                    <!-- Left: Interactive Voice Visualizer -->
+                    <div class="lg:col-span-2 bg-slate-900 rounded-xl shadow-2xl overflow-hidden flex flex-col relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-indigo-900/20 to-slate-900 z-0"></div>
+                        
+                        <!-- Call Header -->
+                        <div class="relative z-10 p-6 flex justify-between items-center border-b border-slate-800">
+                            <div>
+                                <h3 class="text-white font-bold text-lg"><i class="fa-solid fa-phone-volume text-pink-500 mr-2"></i>Live Payer Call</h3>
+                                <p class="text-slate-400 text-xs">Bot ID: V-9938 • Line: Secure SIP Trunk</p>
+                            </div>
+                            <div id="call-timer" class="px-3 py-1 bg-slate-800 rounded text-green-400 font-mono text-sm hidden">00:00</div>
+                        </div>
+
+                        <!-- Visualization Area -->
+                        <div class="flex-grow relative z-10 flex flex-col items-center justify-center p-10">
+                            <div id="voice-waves" class="hidden flex items-end justify-center gap-1 h-16 mb-8">
+                                <div class="bar" style="animation-duration: 474ms"></div>
+                                <div class="bar" style="animation-duration: 433ms"></div>
+                                <div class="bar" style="animation-duration: 407ms"></div>
+                                <div class="bar" style="animation-duration: 458ms"></div>
+                                <div class="bar" style="animation-duration: 400ms"></div>
+                                <div class="bar" style="animation-duration: 427ms"></div>
+                            </div>
+                            
+                            <div id="call-status-text" class="text-slate-500 text-xl font-light">Ready to Dial</div>
+                            
+                            <!-- Transcript Area -->
+                            <div id="transcript-box" class="w-full max-w-lg mt-8 p-4 bg-slate-800/50 rounded-lg border border-slate-700 h-48 overflow-y-auto text-sm hidden custom-scroll">
+                                <!-- Dynamic Transcript -->
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="relative z-10 p-6 bg-slate-950 border-t border-slate-800 flex justify-center gap-4">
+                            <button onclick="startVoiceCall('anthem')" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full shadow-lg shadow-indigo-900/50 transition-all transform hover:scale-105">
+                                <i class="fa-solid fa-phone mr-2"></i> Call Anthem IVR
+                            </button>
+                            <button onclick="startVoiceCall('uhc')" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full shadow-lg shadow-blue-900/50 transition-all transform hover:scale-105">
+                                <i class="fa-solid fa-phone mr-2"></i> Call UHC IVR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Extracted Data -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                        <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-100 pb-2">Extracted Benefits</h4>
+                        <div class="flex-grow space-y-4">
+                            <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                <p class="text-[10px] uppercase text-slate-400 font-bold">Benefit Type</p>
+                                <p id="voice-benefit" class="text-slate-800 font-bold">--</p>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                <p class="text-[10px] uppercase text-slate-400 font-bold">Authorization Req?</p>
+                                <p id="voice-auth" class="text-slate-800 font-bold">--</p>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                <p class="text-[10px] uppercase text-slate-400 font-bold">Reference #</p>
+                                <p id="voice-ref" class="text-slate-800 font-bold">--</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-4 bg-green-50 text-green-800 text-xs rounded border border-green-100">
+                            <i class="fa-solid fa-check-circle mr-1"></i> Data synced to EDI 271 Record.
                         </div>
                     </div>
                 </div>
@@ -321,16 +681,16 @@
                 <!-- KPI Header -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-                        <p class="text-xs text-slate-500 uppercase font-bold">Total Claims in AR</p>
-                        <p class="text-3xl font-bold text-slate-800 mt-1">142</p>
+                        <p class="text-xs text-slate-500 uppercase font-bold">Total Claims</p>
+                        <p class="text-3xl font-bold text-slate-800 mt-1" id="kpi-total-claims">0</p>
                     </div>
                     <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-                        <p class="text-xs text-slate-500 uppercase font-bold">Claims > 90 Days</p>
-                        <p class="text-3xl font-bold text-red-600 mt-1">12</p>
+                        <p class="text-xs text-slate-500 uppercase font-bold">Outstanding AR</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-1" id="kpi-outstanding">$0.00</p>
                     </div>
                     <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200">
-                        <p class="text-xs text-slate-500 uppercase font-bold">Est. Reimbursement</p>
-                        <p class="text-3xl font-bold text-green-600 mt-1">$45,290</p>
+                        <p class="text-xs text-slate-500 uppercase font-bold">Denial Rate</p>
+                        <p class="text-3xl font-bold text-red-600 mt-1" id="kpi-denial-rate">0%</p>
                     </div>
                 </div>
 
@@ -338,71 +698,28 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                         <h3 class="font-bold text-slate-700">Active Claims Tracker</h3>
-                        <div class="flex gap-2">
-                            <button class="text-xs bg-white border border-slate-300 px-3 py-1 rounded hover:bg-slate-50">Filter: All</button>
-                            <button id="btn-update-claims" onclick="updateClaimsStatus()" class="text-xs bg-blue-600 text-white border border-blue-600 px-3 py-1 rounded hover:bg-blue-700 transition-colors">Update Status (EDI 276)</button>
+                        <!-- Batch Button -->
+                        <div id="claims-actions">
+                            <p class="text-xs text-slate-400 italic">Waiting for eligibility data...</p>
                         </div>
                     </div>
-                    <div class="overflow-x-auto custom-scroll">
+                    <div class="overflow-x-auto custom-scroll h-[500px]">
                         <table class="w-full text-sm text-left text-slate-600">
-                            <thead class="text-xs text-slate-500 uppercase bg-slate-100">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-100 sticky top-0 z-10">
                                 <tr>
                                     <th class="px-6 py-3">Claim ID</th>
                                     <th class="px-6 py-3">Patient</th>
+                                    <th class="px-6 py-3">Diagnosis (ICD-10)</th>
                                     <th class="px-6 py-3">Payer</th>
-                                    <th class="px-6 py-3 w-1/3">Lifecycle Status</th>
-                                    <th class="px-6 py-3">Days in AR</th>
+                                    <th class="px-6 py-3">Status (277)</th>
                                     <th class="px-6 py-3">Amount</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                <!-- Row 1 -->
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-001</td>
-                                    <td class="px-6 py-4">Connor, Sarah</td>
-                                    <td class="px-6 py-4">Anthem BCBS</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-xs font-bold text-blue-600">Adjudication</span>
-                                        </div>
-                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
-                                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: 75%"></div>
-                                        </div>
+                            <tbody id="claims-table-body" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-10 text-center text-slate-400">
+                                        No claims loaded. Run Eligibility Check first.
                                     </td>
-                                    <td class="px-6 py-4" id="days-connor"><span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">45 Days</span></td>
-                                    <td class="px-6 py-4 font-bold">$1,500.00</td>
-                                </tr>
-                                <!-- Row 2 -->
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-042</td>
-                                    <td class="px-6 py-4">Stark, Tony</td>
-                                    <td class="px-6 py-4">Medicare</td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-xs font-bold text-green-600">Pending Payment</span>
-                                        </div>
-                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
-                                            <div class="bg-green-500 h-1.5 rounded-full" style="width: 90%"></div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4"><span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">14 Days</span></td>
-                                    <td class="px-6 py-4 font-bold">$340.00</td>
-                                </tr>
-                                <!-- Row 3 -->
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-6 py-4 font-mono text-slate-800">CLM-24-089</td>
-                                    <td class="px-6 py-4">Banner, Bruce</td>
-                                    <td class="px-6 py-4">Aetna EPO</td>
-                                    <td class="px-6 py-4" id="status-banner">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="text-xs font-bold text-slate-500">Payer Received</span>
-                                        </div>
-                                        <div class="w-full bg-slate-200 rounded-full h-1.5">
-                                            <div class="bg-slate-400 h-1.5 rounded-full" style="width: 40%"></div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4"><span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded">5 Days</span></td>
-                                    <td class="px-6 py-4 font-bold">$890.00</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -415,549 +732,923 @@
                  <div class="bg-indigo-900 rounded-xl shadow-lg p-6 mb-8 text-white flex justify-between items-center relative overflow-hidden">
                     <div class="relative z-10">
                         <h3 class="text-2xl font-bold mb-1">AI Denial Resolution</h3>
-                        <p class="text-indigo-200 text-sm">Prioritizing worklist based on ROI and Win Probability.</p>
+                        <p class="text-indigo-200 text-sm">Automated analysis of EDI 835/277 denial codes.</p>
                     </div>
                     <div class="text-right relative z-10">
-                        <p class="text-3xl font-bold">$12,450</p>
-                        <p class="text-xs text-indigo-300 uppercase">Recoverable Revenue</p>
+                        <p class="text-3xl font-bold" id="denial-kpi-revenue">$0.00</p>
+                        <p class="text-xs text-indigo-300 uppercase">Actionable Revenue</p>
                     </div>
                     <div class="absolute -right-10 -bottom-10 text-9xl text-white opacity-5 transform rotate-12">
                         <i class="fa-solid fa-robot"></i>
                     </div>
                  </div>
 
-                 <div class="grid grid-cols-1 gap-6">
-                    
-                    <!-- Denial Card 1 -->
-                    <div id="card-denial-1" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-center">
-                        <div class="flex-shrink-0 text-center md:text-left">
-                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto md:mx-0">
-                                <span class="font-bold text-red-600 text-lg">CO-16</span>
-                            </div>
-                        </div>
-                        <div class="flex-grow text-center md:text-left">
-                            <h4 class="font-bold text-slate-800 text-lg">Claim/Service Lacks Information</h4>
-                            <p class="text-sm text-slate-500 mb-2">Claim ID: #CLM-776655 • Payer: Anthem PPO</p>
-                            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                                <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">Value: $4,500</span>
-                                <span class="px-2 py-1 bg-red-50 text-red-600 text-xs rounded border border-red-100">Deadline: 15 Days</span>
-                            </div>
-                        </div>
-                        <div class="w-full md:w-64 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <div class="flex justify-between text-xs font-bold mb-1">
-                                <span class="text-slate-600">AI Win Probability</span>
-                                <span class="text-green-600">92%</span>
-                            </div>
-                            <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
-                                <div class="bg-green-500 h-2 rounded-full" style="width: 92%"></div>
-                            </div>
-                            <button id="btn-appeal-1" onclick="generateAppeal('CLM-776655')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Appeal
-                            </button>
-                        </div>
+                 <!-- Dynamic Denial Worklist -->
+                 <div id="denials-list" class="grid grid-cols-1 gap-6">
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-check-circle text-4xl mb-3 text-slate-300"></i>
+                        <p>No denials detected yet.</p>
                     </div>
-
-                    <!-- Denial Card 2 -->
-                    <div id="card-denial-2" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-center opacity-75">
-                        <div class="flex-shrink-0 text-center md:text-left">
-                            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto md:mx-0">
-                                <span class="font-bold text-orange-600 text-lg">CO-50</span>
-                            </div>
-                        </div>
-                        <div class="flex-grow text-center md:text-left">
-                            <h4 class="font-bold text-slate-800 text-lg">Not Deemed Medically Necessary</h4>
-                            <p class="text-sm text-slate-500 mb-2">Claim ID: #CLM-332211 • Payer: Medicare</p>
-                            <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                                <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">Value: $250</span>
-                                <span class="px-2 py-1 bg-orange-50 text-orange-600 text-xs rounded border border-orange-100">Deadline: 45 Days</span>
-                            </div>
-                        </div>
-                        <div class="w-full md:w-64 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <div class="flex justify-between text-xs font-bold mb-1">
-                                <span class="text-slate-600">AI Win Probability</span>
-                                <span class="text-orange-500">15%</span>
-                            </div>
-                            <div class="w-full bg-slate-200 rounded-full h-2 mb-3">
-                                <div class="bg-orange-500 h-2 rounded-full" style="width: 15%"></div>
-                            </div>
-                            <button id="btn-writeoff-2" onclick="recommendWriteOff('CLM-332211')" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors">
-                                <i class="fa-regular fa-trash-can"></i> Recommend Write-Off
-                            </button>
-                        </div>
-                    </div>
-
                  </div>
             </div>
 
             <!-- APPEAL LETTER MODAL -->
             <div id="modal-appeal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-enter overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl modal-enter overflow-hidden flex flex-col max-h-[90vh]">
                     <div class="bg-indigo-600 p-4 flex justify-between items-center text-white">
                         <h3 class="font-bold flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Generated Appeal Draft</h3>
                         <button onclick="closeModal()" class="hover:text-indigo-200"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
                     <div class="p-8 overflow-y-auto custom-scroll bg-slate-50">
-                        <div class="bg-white p-8 shadow border border-slate-200 text-sm font-serif text-slate-800 leading-relaxed">
-                            <p class="mb-4 text-right text-slate-500 text-xs">Generated: <span id="modal-date"></span></p>
-                            
-                            <p class="mb-2"><strong>To:</strong> Anthem Blue Cross PPO<br><strong>Re:</strong> Appeal for Claim #CLM-776655</p>
-                            <p class="mb-6"><strong>Patient:</strong> John Doe (ID: M12345678)</p>
-                            
-                            <p class="mb-4">To Whom It May Concern,</p>
-                            
-                            <p class="mb-4">This letter serves as a formal appeal regarding the denial of the above-referenced claim due to "CO-16: Lack of Information."</p>
-                            
-                            <p class="mb-4">The NexGen AI engine has identified that the Operative Report was requested but not successfully linked in the initial adjudication. Attached to this electronic appeal, please find the complete operative notes and the surgeon's detailed clinical summary supporting the medical necessity of the procedure performed on 10/12/2024.</p>
-                            
-                            <p class="mb-4">Based on your payer guidelines (Section 4.2), this documentation satisfies the requirement for reimbursement.</p>
-                            
-                            <p class="mb-6">We request a re-determination and prompt payment of the allowable amount of $4,500.00.</p>
-                            
-                            <p>Sincerely,</p>
-                            <p class="font-bold">NexGen RCM Automation Agent</p>
+                        <div class="bg-white p-12 shadow-lg border border-slate-200 text-sm font-serif text-slate-800 leading-relaxed" id="appeal-content">
+                            <!-- Content injected via JS -->
                         </div>
                     </div>
                     <div class="p-4 border-t border-slate-200 bg-white flex justify-end gap-3">
                         <button onclick="closeModal()" class="px-4 py-2 text-slate-600 text-sm font-bold hover:bg-slate-100 rounded">Edit</button>
-                        <button onclick="submitAppeal()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 rounded shadow-lg shadow-indigo-500/30">Submit Appeal (EDI 277)</button>
+                        <button onclick="submitAppeal()" class="px-4 py-2 bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 rounded shadow-lg shadow-indigo-500/30">Submit Appeal</button>
                     </div>
+                </div>
+            </div>
+            
+            <!-- PAYMENT LINK MODAL -->
+            <div id="modal-payment" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm modal-enter overflow-hidden flex flex-col p-6 text-center">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2">Patient Payment Portal</h3>
+                    <p class="text-sm text-slate-500 mb-6">Scan to pay balance: <span class="font-bold text-slate-800">$150.00</span></p>
+                    <div id="qrcode" class="flex justify-center mb-6"></div>
+                    <div class="flex gap-2">
+                        <button onclick="closePaymentModal()" class="flex-1 border border-slate-300 text-slate-600 font-bold py-2 rounded">Close</button>
+                        <button class="flex-1 bg-blue-600 text-white font-bold py-2 rounded flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i> Send SMS</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NETWORK MONITOR (DEVTOOLS) -->
+            <div id="devtools-panel" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-gray-700 h-64 z-50 transform translate-y-full transition-transform duration-300 text-white font-mono text-xs flex flex-col shadow-2xl">
+                <div class="flex justify-between items-center px-4 py-2 bg-gray-800 border-b border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <span class="text-emerald-400 font-bold"><i class="fa-solid fa-terminal mr-2"></i>Network Monitor</span>
+                        <span class="text-gray-500">|</span>
+                        <span class="text-gray-400">Preserve Log</span>
+                        <input type="checkbox" checked class="w-3 h-3 accent-emerald-500">
+                    </div>
+                    <button onclick="toggleDevTools()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="flex-grow overflow-y-auto p-2" id="network-logs">
+                    <!-- Logs go here -->
                 </div>
             </div>
 
         </div>
+        
+        <!-- FOOTER (NEW) -->
+        <footer class="fixed bottom-0 right-0 p-4 text-right bg-white/80 backdrop-blur-sm border-t border-slate-200 rounded-tl-xl shadow-lg z-40 text-xs">
+            <div class="font-bold text-slate-700 mb-1">Tabitha Khadse</div>
+            <div class="flex gap-3 justify-end text-slate-500">
+                <a href="https://github.com/tabitha-dev" target="_blank" class="hover:text-black transition-colors flex items-center gap-1"><i class="fa-brands fa-github"></i> GitHub</a>
+                <a href="https://www.linkedin.com/in/tabitha-dev/" target="_blank" class="hover:text-blue-600 transition-colors flex items-center gap-1"><i class="fa-brands fa-linkedin"></i> LinkedIn</a>
+            </div>
+            <div class="text-[9px] text-slate-400 mt-1">v4.5.2 Enterprise Edition • © 2025 NexGen RCM</div>
+        </footer>
+
+        <!-- NEW: NexGen Copilot Widget -->
+        <div id="copilot-widget" class="fixed bottom-6 right-6 flex flex-col items-end z-50 mb-16"> <!-- Lifted slightly for footer -->
+            <!-- Chat Window -->
+            <div id="copilot-window" class="hidden bg-white rounded-2xl shadow-2xl w-80 mb-4 border border-indigo-100 overflow-hidden chat-enter">
+                <div class="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-wand-magic-sparkles text-sm"></i></div>
+                        <div>
+                            <h4 class="font-bold text-sm">NexGen Copilot</h4>
+                            <p class="text-[10px] text-indigo-200">Generative AI Assistant</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleCopilot()" class="text-white hover:text-indigo-200"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="copilot-chat-history" class="h-64 overflow-y-auto p-4 bg-slate-50 space-y-3 custom-scroll text-xs">
+                    <!-- Intro Message -->
+                    <div class="flex gap-2">
+                        <div class="w-6 h-6 bg-indigo-100 rounded-full flex-shrink-0 flex items-center justify-center text-indigo-600"><i class="fa-solid fa-robot text-[10px]"></i></div>
+                        <div class="bg-white p-2 rounded-r-lg rounded-bl-lg shadow-sm border border-slate-100 text-slate-700">
+                            Hi! I can help explain denials, look up CPT codes, or draft patient emails. How can I assist?
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-white border-t border-slate-100">
+                    <div class="relative">
+                        <input id="copilot-input" type="text" placeholder="Ask AI..." class="w-full bg-slate-50 border border-slate-200 rounded-full py-2 px-4 pr-10 text-xs focus:outline-none focus:border-indigo-500" onkeypress="handleChatEnter(event)">
+                        <button onclick="sendChat()" class="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                    <div class="flex gap-2 mt-2 overflow-x-auto pb-1">
+                        <button onclick="suggestPrompt('Explain this denial')" class="whitespace-nowrap px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] hover:bg-indigo-100 transition-colors">Explain Denial</button>
+                        <button onclick="suggestPrompt('Draft collection SMS')" class="whitespace-nowrap px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] hover:bg-indigo-100 transition-colors">Draft SMS</button>
+                        <button onclick="suggestPrompt('Look up CPT 99214')" class="whitespace-nowrap px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] hover:bg-indigo-100 transition-colors">CPT 99214</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Toggle Button -->
+            <button onclick="toggleCopilot()" class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 group relative">
+                <i class="fa-solid fa-wand-magic-sparkles text-xl group-hover:rotate-12 transition-transform"></i>
+                <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+            </button>
+        </div>
+
     </main>
 
     <script>
-        // --- UX / UTILITY FUNCTIONS ---
+        // --- CENTRAL DATA STORE ---
+        const BOT_PATIENTS = [
+            {id: "M12345678", dob: "1920-07-04", payer_key: "medicare", name: "Steve Rogers", cpt: "99214", icd: "R05", icd_desc: "Cough", claim_id: "CLM-AV-001", amount: 150.00, raf: 1.2, sdoh: [], gaps: ["Annual Wellness Visit"], p2p: 92}, 
+            {id: "A55566677", dob: "1984-11-22", payer_key: "anthem", name: "Natasha Romanoff", cpt: "73721", icd: "M54.5", icd_desc: "Low back pain", claim_id: "CLM-AV-002", amount: 850.00, raf: 0.6, sdoh: [], gaps: [], p2p: 88}, 
+            {id: "Z99999999", dob: "1980-07-31", payer_key: "uhc", name: "Bruce Banner", cpt: "99203", icd: "R51", icd_desc: "Headache", claim_id: "CLM-AV-003", amount: 220.00, raf: 2.1, sdoh: ["Z59.0 (Homelessness)"], gaps: ["Depression Screening"], p2p: 15}, 
+            {id: "K99887766", dob: "2001-08-10", payer_key: "kaiser", name: "Peter Parker", cpt: "44120", icd: "R51", icd_desc: "Headache", claim_id: "CLM-AV-004", amount: 4500.00, raf: 0.4, sdoh: ["Z59.6 (Low Income)"], gaps: [], p2p: 45}, 
+            {id: "AE9988776", dob: "1970-05-29", payer_key: "aetna", name: "Tony Stark", cpt: "99214", icd: "I10", icd_desc: "Hypertension", claim_id: "CLM-AV-005", amount: 150.00, raf: 1.5, sdoh: [], gaps: ["Controlling BP"], p2p: 99},
+            {id: "CI1122334", dob: "1974-04-18", payer_key: "cigna", name: "Wanda Maximoff", cpt: "99203", icd: "F41.1", icd_desc: "Generalized anxiety", claim_id: "CLM-AV-006", amount: 220.00, raf: 1.1, sdoh: [], gaps: ["Behav. Health Assessment"], p2p: 60},
+            {id: "HU8877665", dob: "1971-03-15", payer_key: "humana", name: "Clint Barton", cpt: "73721", icd: "S52.501A", icd_desc: "Fracture of radius", claim_id: "CLM-AV-007", amount: 850.00, raf: 0.8, sdoh: [], gaps: [], p2p: 75},
+            {id: "ME2233445", dob: "1999-02-14", payer_key: "medicaid", name: "T'Challa", cpt: "99214", icd: "J01.90", icd_desc: "Acute sinusitis", claim_id: "CLM-AV-008", amount: 150.00, raf: 0.5, sdoh: [], gaps: [], p2p: 95},
+            {id: "A77483920", dob: "1985-11-15", payer_key: "anthem", name: "Scott Lang", cpt: "73721", icd: "M25.561", icd_desc: "Pain in right knee", claim_id: "CLM-AV-009", amount: 850.00, raf: 0.7, sdoh: ["Z56.0 (Unemployment)"], gaps: [], p2p: 30},
+            {id: "Z88392019", dob: "1994-06-12", payer_key: "uhc", name: "Bucky Barnes", cpt: "99214", icd: "S06.0X0A", icd_desc: "Concussion", claim_id: "CLM-AV-010", amount: 150.00, raf: 1.4, sdoh: [], gaps: [], p2p: 50}, 
+            {id: "C22334455", dob: "1938-04-18", payer_key: "cigna", name: "Clark Kent", cpt: "99214", icd: "H52.13", icd_desc: "Myopia", claim_id: "CLM-DC-001", amount: 150.00, raf: 0.3, sdoh: [], gaps: [], p2p: 80},
+            {id: "H11223344", dob: "1941-03-15", payer_key: "humana", name: "Bruce Wayne", cpt: "73721", icd: "S42.20", icd_desc: "Fracture of humerus", claim_id: "CLM-DC-002", amount: 850.00, raf: 0.9, sdoh: [], gaps: [], p2p: 99},
+            {id: "K66778899", dob: "1982-05-10", payer_key: "kaiser", name: "Victor Stone", cpt: "44120", icd: "K35.80", icd_desc: "Acute appendicitis", claim_id: "CLM-DC-003", amount: 4500.00, raf: 1.8, sdoh: ["Z65.1 (Imprisonment)"], gaps: [], p2p: 10}, 
+        ];
+
+        const MOCK_DB = {
+            "medicare": { name: "Medicare Part A & B", type: "Federal / FFS", deductible: 240.00, met: 240.00, coinsurance_pct: 20, copay: 0.00, oop: "N/A", network: "Open Access" },
+            "uhc": { name: "UHC Choice Plus", type: "POS", deductible: 2000.00, met: 1890.00, coinsurance_pct: 10, copay: 25.00, oop: "$4,500", network: "National Choice" },
+            "anthem": { name: "Anthem BCBS PPO", type: "PPO", deductible: 1500.00, met: 450.00, coinsurance_pct: 20, copay: 35.00, oop: "$5,000", network: "BlueCard PPO" },
+            "kaiser": { name: "Kaiser Permanente", type: "HMO", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 20.00, oop: "$1,500", network: "Kaiser Only" },
+            "medicaid": { name: "State Medicaid", type: "HMO", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 3.00, oop: "$0", network: "Strict HMO" },
+            "aetna": { name: "Aetna Open Access", type: "EPO", deductible: 3000.00, met: 0.00, coinsurance_pct: 0, copay: 50.00, oop: "$6,500", network: "Select Network" },
+            "cigna": { name: "Cigna LocalPlus", type: "HDHP", deductible: 5000.00, met: 2100.00, coinsurance_pct: 0, copay: 0.00, oop: "$7,000", network: "LocalPlus" },
+            "humana": { name: "Humana Gold Plus", type: "MA-HMO", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 10.00, oop: "$3,400", network: "Gold Plus" }
+        };
+
+        // --- STATE VARIABLES ---
+        let runStats = { total: 0, approved: 0, denied: 0, totalValue: 0.0 };
+        let processedPatients = []; 
+        let claimsData = [];
+        let isPrivacyMaskOn = true;
+        let devToolsOpen = false;
+
+        // --- SESSION TIMER ---
+        let sessionSeconds = 900; 
+        setInterval(() => {
+            sessionSeconds--;
+            if (sessionSeconds < 0) sessionSeconds = 900; 
+            const mins = Math.floor(sessionSeconds / 60).toString().padStart(2, '0');
+            const secs = (sessionSeconds % 60).toString().padStart(2, '0');
+            safeSetText('session-timer', `Session: ${mins}:${secs}`);
+        }, 1000);
+
+        // --- UTILS ---
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
+            if(!container) return;
             const toast = document.createElement('div');
-            
-            let bgColor = 'bg-green-600';
-            let icon = 'fa-check-circle';
-            
-            if (type === 'error') {
-                bgColor = 'bg-red-600';
-                icon = 'fa-circle-xmark';
-            } else if (type === 'warning') {
-                bgColor = 'bg-yellow-600';
-                icon = 'fa-triangle-exclamation';
-            }
-            
+            let bgColor = type === 'error' ? 'bg-red-600' : (type === 'warning' ? 'bg-yellow-600' : 'bg-green-600');
+            let icon = type === 'error' ? 'fa-circle-xmark' : (type === 'warning' ? 'fa-triangle-exclamation' : 'fa-check-circle');
             toast.className = `p-3 rounded-lg shadow-xl text-white ${bgColor} animate-fade-in flex items-center gap-3`;
             toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
-            
-            container.prepend(toast); // show newest on top
-            
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => toast.remove(), 500);
-            }, 4000);
+            container.prepend(toast);
+            setTimeout(() => { toast.classList.add('opacity-0', 'transition-opacity'); setTimeout(() => toast.remove(), 500); }, 4000);
         }
 
         function logConsole(msg) {
+            const timestamp = new Date().toLocaleTimeString();
             const consoleDiv = document.getElementById('console-log');
+            if(!consoleDiv) return;
             const p = document.createElement('p');
-            p.innerHTML = `<span class="text-green-600">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+            const auditId = Math.floor(Math.random() * 90000) + 10000;
+            p.innerHTML = `<span class="text-green-600">[${timestamp}] [AUDIT:${auditId}]</span> ${msg}`;
             consoleDiv.prepend(p);
         }
-        
-        // --- NAVIGATION LOGIC ---
-        function switchTab(tabName) {
-            // Hide all views
-            document.getElementById('view-eligibility').classList.add('hidden');
-            document.getElementById('view-claims').classList.add('hidden');
-            document.getElementById('view-denials').classList.add('hidden');
 
-            // Reset Tab Styles (Tailwind classes for active/inactive)
-            const tabs = ['eligibility', 'claims', 'denials'];
-            tabs.forEach(t => {
-                const btn = document.getElementById('nav-' + t);
-                if(t === tabName) {
-                    btn.className = "w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all";
-                    const icon = btn.querySelector('i');
-                    if(icon) {
-                        icon.className = icon.className.replace('text-slate-500', 'text-white').replace('text-purple-400', 'text-white'); // Simplification for demo
-                    }
-                } else {
-                    btn.className = "w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group text-slate-300";
-                    // Restore original colors roughly
-                    const icon = btn.querySelector('i');
-                    if(t === 'denials') icon.className = "fa-solid fa-robot w-6 text-purple-400 group-hover:text-purple-300";
-                    else if (t === 'claims') icon.className = "fa-solid fa-file-invoice-dollar w-6 text-slate-500 group-hover:text-white";
-                    else icon.className = "fa-solid fa-magnifying-glass-chart w-6 text-slate-500 group-hover:text-white";
+        function logEDI(msg, isOutbound = true) {
+            const ediDiv = document.getElementById('edi-stream');
+            if(!ediDiv) return;
+            const p = document.createElement('p');
+            const prefix = isOutbound ? ">>" : "<<";
+            const color = isOutbound ? "text-blue-400" : "text-green-400";
+            p.className = "font-mono text-[10px]";
+            p.innerHTML = `<span class="${color} font-bold">${prefix}</span> <span class="text-slate-300">${msg}</span>`;
+            ediDiv.prepend(p);
+        }
+        
+        function logFHIR(json, isOutbound = true) {
+            const fhirDiv = document.getElementById('fhir-stream');
+            if(!fhirDiv) return;
+            const p = document.createElement('pre');
+            const prefix = isOutbound ? "POST /Coverage" : "200 OK";
+            const color = isOutbound ? "text-blue-300" : "text-green-300";
+            p.className = "font-mono text-[9px] mb-2";
+            p.innerHTML = `<span class="${color} font-bold">${prefix}</span>\n<span class="text-slate-400">${JSON.stringify(json, null, 2)}</span>`;
+            fhirDiv.prepend(p);
+        }
+
+        function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        // --- SAFE UPDATE HELPERS (Prevent Crashes) ---
+        function safeSetText(id, text) {
+            const el = document.getElementById(id);
+            if(el) el.innerText = text;
+        }
+
+        function safeSetHTML(id, html) {
+            const el = document.getElementById(id);
+            if(el) el.innerHTML = html;
+        }
+        
+        function safeSetStyle(id, prop, val) {
+            const el = document.getElementById(id);
+            if(el) el.style[prop] = val;
+        }
+
+        function safeSetClass(id, cls) {
+            const el = document.getElementById(id);
+            if(el) el.className = cls;
+        }
+
+        // --- LOGIN & SSO ---
+        function performLogin() {
+            const btn = document.getElementById('btn-login');
+            const card = document.getElementById('login-card');
+            const screen = document.getElementById('login-screen');
+            
+            if(btn) {
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...';
+                btn.disabled = true;
+            }
+            
+            setTimeout(() => {
+                if(card) {
+                    card.style.transform = "scale(0.9)";
+                    card.style.opacity = "0";
                 }
-            });
-
-            // Show selected view
-            document.getElementById('view-' + tabName).classList.remove('hidden');
-
-            // Update Header Title
-            const titles = {
-                'eligibility': 'Real-Time Eligibility Verification',
-                'claims': 'Claims Lifecycle Tracker (EDI 276/277)',
-                'denials': 'AI Denials Resolution Manager'
-            };
-            document.getElementById('header-title').innerText = titles[tabName];
-        }
-
-        // --- MOCK DATABASE (EXISTING) ---
-        const MOCK_DB = {
-            "medicare": {
-                name: "Medicare Part A & B",
-                type: "Federal / FFS",
-                deductible: 240.00, // Stored as number for calculation
-                met: 240.00,
-                coinsurance_pct: 20, // New field for calculation
-                copay: 0.00,
-                oop: "N/A",
-                network: "Open Access"
-            },
-            "uhc": {
-                name: "UHC Choice Plus",
-                type: "POS (Point of Service)",
-                deductible: 2000.00,
-                met: 1890.00,
-                coinsurance_pct: 10,
-                copay: 25.00,
-                oop: "$4,500.00",
-                network: "National Choice"
-            },
-            "anthem": {
-                name: "Anthem BlueCross PPO Gold",
-                type: "PPO (Preferred Provider)",
-                deductible: 1500.00,
-                met: 450.00,
-                coinsurance_pct: 20,
-                copay: 35.00,
-                oop: "$5,000.00",
-                network: "BlueCard PPO"
-            },
-            "kaiser": {
-                name: "Kaiser Permanente",
-                type: "HMO (Health Maint. Org)",
-                deductible: 0.00,
-                met: 0.00,
-                coinsurance_pct: 0,
-                copay: 20.00,
-                oop: "$1,500.00",
-                network: "Kaiser Facilities Only"
-            },
-            // Simplified entries for others, ensuring numerical values are present
-            "medicaid": { name: "State Medicaid", type: "HMO", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 3.00, oop: "$0.00", network: "Strict HMO Network" },
-            "aetna": { name: "Aetna Open Access", type: "EPO", deductible: 3000.00, met: 0.00, coinsurance_pct: 0, copay: 50.00, oop: "$6,500.00", network: "Select Network Only" },
-            "cigna": { name: "Cigna LocalPlus", type: "HDHP w/ HSA", deductible: 5000.00, met: 2100.00, coinsurance_pct: 0, copay: 0.00, oop: "$7,000.00", network: "LocalPlus Network" },
-            "humana": { name: "Humana Gold Plus", type: "Medicare Advantage (HMO)", deductible: 0.00, met: 0.00, coinsurance_pct: 0, copay: 10.00, oop: "$3,400.00", network: "Gold Plus HMO" }
-        };
-
-        // --- ELIGIBILITY & SCRUBBER LOGIC ---
-        
-        function prefillDemo() {
-            document.getElementById('member-id').value = "A99887766";
-            document.getElementById('dob').value = "1985-06-15";
-            showToast("Demo data loaded for John Doe.", 'success');
-        }
-        
-        // This function simulates the Prior Authorization check (EDI 278)
-        function checkAuthStatus() {
-            showToast("EDI 278 Request Sent: Checking for Authorization 12345...", 'warning');
-            logConsole("AUTH: Sending EDI 278 transaction for CPT...");
-
-            setTimeout(() => {
-                document.getElementById('auth-message').innerHTML = `
-                    **PRIOR AUTH REQUIRED.** Auth # is 90210. Expires 12/31/2025.
-                `;
-                document.getElementById('auth-warning').classList.remove('bg-yellow-50');
-                document.getElementById('auth-warning').classList.add('bg-orange-50');
-                showToast("Prior Authorization found! Ready for service.", 'success');
-                logConsole("AUTH: Response received. Authorization is valid.");
-            }, 1500);
-        }
-        
-        function runVerification() {
-            const payerKey = document.getElementById('payer-select').value;
-            const memberId = document.getElementById('member-id').value;
-            const selectedCpt = document.getElementById('service-type').value;
-            const btn = document.getElementById('btn-verify');
-            const loader = document.getElementById('loader');
-            const results = document.getElementById('results-panel');
-            const scrubberWarning = document.getElementById('scrubber-warning');
-
-            if (!memberId) {
-                showToast("Please enter a Member ID for verification.", 'error');
-                return;
-            }
-            
-            // --- NEW: CPT Scrubber Simulation ---
-            scrubberWarning.classList.add('hidden'); // Reset warning
-            if (payerKey === 'kaiser' && selectedCpt === '44120') {
-                scrubberWarning.classList.remove('hidden');
-                document.getElementById('scrubber-message').innerText = 
-                    "CPT Scrubber Warning: Kaiser denies 44120 unless performed at a Kaiser Facility. Consult network rules.";
-                showToast("Pre-emptive denial detected by CPT Scrubber!", 'warning');
-                logConsole("SCRUBBER: HIGH RISK CPT/Payer combination detected.");
-                // Prevent verification if scrubber is critical
-                // return; 
-            } else if (payerKey === 'medicare' && selectedCpt === '73721') {
-                 scrubberWarning.classList.remove('hidden');
-                 document.getElementById('scrubber-message').innerText = 
-                    "CPT Scrubber Warning: Medicare requires ordering physician NPI. Ensure field is populated before billing.";
-            }
-
-            // UI Transitions
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-            results.classList.add('hidden');
-            loader.classList.remove('hidden');
-            
-            logConsole(`Initiating EDI 270 request to ${payerKey.toUpperCase()}...`);
-
-            // Step 2: Update subtext simulation
-            setTimeout(() => {
-                document.getElementById('loader-subtext').innerText = "Verifying Member Eligibility & Benefits...";
-                logConsole("Connection established. Handshaking...");
-            }, 1000);
-
-            // Step 3: Show Results
-            setTimeout(() => {
-                loader.classList.add('hidden');
-                results.classList.remove('hidden');
-                btn.disabled = false;
-                btn.classList.remove('opacity-50');
-                
-                renderResults(payerKey, memberId, selectedCpt);
-            }, 2500);
-        }
-
-        function renderResults(payerKey, memberId, selectedCpt) {
-            const data = MOCK_DB[payerKey];
-            const isInactive = memberId.toUpperCase().startsWith('Z'); // Simulation Rule
-
-            // Basic Info
-            document.getElementById('res-payer').innerText = data.name;
-            document.getElementById('res-date').innerText = new Date().toLocaleDateString();
-            document.getElementById('res-name').innerText = "Doe, John A.";
-            
-            document.getElementById('auth-warning').classList.add('hidden'); // Reset Auth Warning
-
-            const badge = document.getElementById('status-badge');
-            const aiScore = document.getElementById('ai-score');
-            const aiBar = document.getElementById('ai-bar');
-            const aiReason = document.getElementById('ai-reason');
-            
-            // --- Rendering Accumulators (formatted for display) ---
-            const formatCurrency = (val) => `$${val.toFixed(2)}`;
-            
-            document.getElementById('res-deductible').innerText = formatCurrency(data.deductible);
-            document.getElementById('res-met').innerText = formatCurrency(data.met);
-            document.getElementById('res-coins').innerText = `${data.coinsurance_pct}% after ded.`;
-            document.getElementById('res-copay').innerText = formatCurrency(data.copay);
-            document.getElementById('res-oop').innerText = data.oop;
-            document.getElementById('res-network').innerText = data.network;
-
-            if (isInactive) {
-                // INACTIVE STATE
-                badge.innerText = "INACTIVE";
-                badge.className = "bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200";
-                
-                document.getElementById('res-plantype').innerText = "--"; 
-                aiScore.innerText = "12%";
-                aiBar.style.width = "12%";
-                aiBar.className = "bg-red-500 h-2 rounded-full";
-                aiReason.innerText = "CRITICAL: Coverage terminated. High risk of denial.";
-                logConsole(`Response: INACTIVE. Coverage terminated.`);
-                showToast("Verification Failed: Member ID inactive.", 'error');
-                
-            } else {
-                // ACTIVE STATE
-                badge.innerText = "ACTIVE";
-                badge.className = "bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200";
-
-                document.getElementById('res-plantype').innerText = data.type; 
-                aiScore.innerText = "98%";
-                aiBar.style.width = "98%";
-                aiBar.className = "bg-green-400 h-2 rounded-full";
-                aiReason.innerText = "Clean match. Patient has accumulator data available.";
-                logConsole(`Response: ACTIVE. Data parsed successfully.`);
-                showToast("Eligibility Verified Successfully!", 'success');
-                
-                // --- NEW: Prior Authorization Warning Logic ---
-                if (selectedCpt === '44120' && payerKey !== 'kaiser') { // Surgery requires Auth for non-HMOs
-                    document.getElementById('auth-warning').classList.remove('hidden');
-                    document.getElementById('auth-message').innerHTML = `
-                        **PRIOR AUTH REQUIRED** for CPT 44120. Check status before proceeding.
-                    `;
-                    logConsole("AUTH: Prior Auth required for this CPT. Flagging.");
-                } else {
-                    document.getElementById('auth-warning').classList.add('hidden');
-                }
-            }
-            
-            // Re-calculate liability based on new results
-            calculateLiability();
-        }
-
-        function calculateLiability() {
-            // Get current payer data from the visible results
-            const payerKey = document.getElementById('payer-select').value;
-            const data = MOCK_DB[payerKey];
-            const estCost = parseFloat(document.getElementById('procedure-cost').value || 0);
-            const isInactive = document.getElementById('status-badge').innerText === 'INACTIVE';
-
-            if (isInactive || estCost <= 0) {
-                document.getElementById('patient-liability').innerText = '$ --';
-                return;
-            }
-
-            const totalDeductible = data.deductible;
-            const deductibleMet = data.met;
-            const deductibleRemaining = Math.max(0, totalDeductible - deductibleMet);
-            const copay = data.copay;
-            const coinsurancePct = data.coinsurance_pct / 100;
-            
-            let liability = 0;
-            let remainingCost = estCost;
-            
-            // Step 1: Apply Deductible (if applicable)
-            if (deductibleRemaining > 0) {
-                const appliedToDeductible = Math.min(estCost, deductibleRemaining);
-                liability += appliedToDeductible;
-                remainingCost -= appliedToDeductible;
-            }
-
-            // Step 2: Apply Copay (if deductible is met or waived)
-            // Note: For HDHP plans, copay is often $0 and deductible applies first.
-            // Simplified Rule: Apply copay only if deductible is fully met OR plan is HMO/POS
-            if (remainingCost > 0 && data.type.includes('HMO') || data.type.includes('POS')) {
-                 liability += copay;
-            } else if (remainingCost > 0 && data.type.includes('PPO') && deductibleRemaining === 0) {
-                 liability += copay;
-            }
-
-            // Step 3: Apply Coinsurance to remaining balance
-            if (remainingCost > 0 && coinsurancePct > 0) {
-                liability += remainingCost * coinsurancePct;
-            }
-
-            document.getElementById('patient-liability').innerText = `$${liability.toFixed(2)}`;
-            logConsole(`LIABILITY: Calculated estimate of $${liability.toFixed(2)} based on $${estCost.toFixed(2)} procedure cost.`);
-        }
-
-        function saveToEHR() {
-            const memberId = document.getElementById('member-id').value;
-            showToast(`Eligibility data exported to EHR Patient Chart #${memberId}.`, 'success');
-            logConsole("EHR: Eligibility data package pushed to connected PM/EHR system.");
-        }
-
-        // --- CLAIMS STATUS LOGIC ---
-        function updateClaimsStatus() {
-            const btn = document.getElementById('btn-update-claims');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending 276...';
-            logConsole("Initiating Batch EDI 276 Claim Status Request...");
-            showToast("Sending EDI 276 status request...", 'warning');
-
-            setTimeout(() => {
-                // Update UI
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> Updated';
                 setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerText = originalText;
-                }, 2000);
-
-                // Update specific row (Bruce Banner)
-                const bannerRow = document.getElementById('status-banner');
-                if(bannerRow) {
-                    bannerRow.innerHTML = `
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs font-bold text-blue-600">Adjudication</span>
-                        </div>
-                        <div class="w-full bg-slate-200 rounded-full h-1.5">
-                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: 75%"></div>
-                        </div>
-                    `;
-                    logConsole("EDI 277 Response: Claim #CLM-24-089 (Banner) status updated to Adjudication.");
-                }
-                
-                // Update Row 1 (Sarah Connor) - Update days in AR
-                const connorDays = document.getElementById('days-connor');
-                if(connorDays) {
-                    connorDays.innerHTML = '<span class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">46 Days</span>';
-                     logConsole("EDI 277 Response: Claim #CLM-24-001 (Connor) aged to 46 Days.");
-                }
-                showToast("Claims statuses successfully updated!", 'success');
-
+                    if(screen) screen.style.display = "none";
+                    showToast("Welcome back, Tabitha (Admin)", "success");
+                    logConsole("SSO Login Successful. Token Acquired.");
+                }, 500);
             }, 1500);
         }
 
-        // --- AI DENIALS LOGIC ---
-        function generateAppeal(claimId) {
-            const btn = document.getElementById('btn-appeal-1');
-            const originalText = btn.innerHTML;
+        // --- DEVTOOLS NETWORK MONITOR ---
+        function toggleDevTools() {
+            const panel = document.getElementById('devtools-panel');
+            if(!panel) return;
+            if(panel.classList.contains('translate-y-full')) {
+                panel.classList.remove('translate-y-full');
+                devToolsOpen = true;
+            } else {
+                panel.classList.add('translate-y-full');
+                devToolsOpen = false;
+            }
+        }
+
+        function logNetworkRequest(method, url, status, payload) {
+            const logs = document.getElementById('network-logs');
+            if(!logs) return;
+            const div = document.createElement('div');
+            div.className = "flex gap-4 py-1 border-b border-gray-800 hover:bg-gray-800 cursor-pointer";
+            const color = status === 200 || status === 201 ? "text-green-400" : "text-red-400";
+            div.innerHTML = `
+                <span class="w-12 text-gray-500 font-bold">${method}</span>
+                <span class="w-16 ${color}">${status}</span>
+                <span class="flex-grow text-gray-300 truncate">${url}</span>
+                <span class="w-20 text-gray-500 text-right">${Math.floor(Math.random() * 200 + 50)}ms</span>
+            `;
+            div.onclick = () => alert(JSON.stringify(payload, null, 2)); // Simple payload view
+            logs.prepend(div);
+        }
+
+        // --- PRIVACY & HIPAA FUNCTIONS ---
+        function togglePrivacy() {
+            const toggleEl = document.getElementById('privacy-toggle');
+            if(!toggleEl) return;
+            isPrivacyMaskOn = toggleEl.checked;
+            const phiElements = document.querySelectorAll('.phi-target');
+            const phiWarning = document.getElementById('phi-warning');
             
-            // 1. Loading State
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Drafting...';
+            if (isPrivacyMaskOn) {
+                phiElements.forEach(el => {
+                    el.classList.add('phi-masked');
+                    if(el.tagName === 'INPUT') el.type = 'password';
+                });
+                if(phiWarning) phiWarning.classList.add('hidden');
+                logConsole("Privacy Shield ENABLED. PHI Masking Active.");
+            } else {
+                phiElements.forEach(el => {
+                    el.classList.remove('phi-masked');
+                    if(el.tagName === 'INPUT') el.type = 'text';
+                });
+                if(phiWarning) phiWarning.classList.remove('hidden');
+                logConsole("ALERT: Privacy Shield DISABLED. User accessed unmasked PHI.");
+                showToast("Warning: PHI is now visible on screen.", "warning");
+            }
+        }
+
+        // --- NAVIGATION ---
+        function switchTab(tabName) {
+            ['coding', 'eligibility', 'claims', 'denials', 'voice'].forEach(t => {
+                const el = document.getElementById('view-' + t);
+                if(el) el.classList.add('hidden');
+            });
             
-            // 2. Simulate AI Delay
+            const targetView = document.getElementById('view-' + tabName);
+            if(targetView) targetView.classList.remove('hidden');
+            
+            ['coding', 'eligibility', 'claims', 'denials', 'voice'].forEach(t => {
+                const btn = document.getElementById('nav-' + t);
+                if(!btn) return;
+                if (t === tabName) btn.className = "w-full text-left flex items-center gap-3 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg shadow-blue-900/50 transition-all";
+                else btn.className = "w-full text-left flex items-center gap-3 hover:bg-slate-800 px-4 py-3 rounded-lg transition-all group text-slate-300";
+            });
+            
+            const titles = { 'coding': 'AI Clinical Coding', 'eligibility': 'Real-Time Eligibility', 'claims': 'Claims Lifecycle', 'denials': 'AI Denial Resolution', 'voice': 'Voice AI Agent (IVR)' };
+            safeSetText('header-title', titles[tabName] || "Dashboard");
+            
+            if (tabName === 'claims') renderClaimsTable();
+            if (tabName === 'denials') renderDenialsWorklist();
+        }
+
+        function switchStream(type) {
+            const ediDiv = document.getElementById('edi-stream');
+            const fhirDiv = document.getElementById('fhir-stream');
+            const tabEdi = document.getElementById('tab-edi');
+            const tabFhir = document.getElementById('tab-fhir');
+            if(!ediDiv || !fhirDiv) return;
+
+            if(type === 'edi') {
+                ediDiv.classList.remove('hidden'); ediDiv.classList.add('block');
+                fhirDiv.classList.add('hidden'); fhirDiv.classList.remove('block');
+                if(tabEdi) tabEdi.className = "text-white bg-slate-700 px-2 py-1 rounded";
+                if(tabFhir) tabFhir.className = "text-slate-500 hover:text-white px-2 py-1 rounded";
+            } else {
+                ediDiv.classList.add('hidden'); ediDiv.classList.remove('block');
+                fhirDiv.classList.remove('hidden'); fhirDiv.classList.add('block');
+                if(tabFhir) tabFhir.className = "text-white bg-slate-700 px-2 py-1 rounded";
+                if(tabEdi) tabEdi.className = "text-slate-500 hover:text-white px-2 py-1 rounded";
+            }
+        }
+
+        function startActiveSimulation() {
+            const activeTab = ['coding', 'eligibility', 'claims', 'denials', 'voice'].find(t => {
+                const el = document.getElementById('view-' + t);
+                return el && !el.classList.contains('hidden');
+            });
+            
+            if (activeTab === 'coding') runNLP();
+            else if (activeTab === 'claims') runClaimsBatch();
+            else if (activeTab === 'eligibility') startEligibilityBatch();
+            else if (activeTab === 'voice') showToast("Use the 'Call' buttons in the interface.", "warning");
+            else showToast("No automated task for this view.", "warning");
+        }
+
+        // --- CODING ---
+        function loadSampleNote() {
+            const note = `PATIENT: Rogers, Steve\nDOB: 07/04/1920\nDATE OF SERVICE: Today\n\nSUBJECTIVE: Patient presents with persistent cough.\nOBJECTIVE: Lungs clear.\nASSESSMENT: Cough (R05)\nPLAN: Office Visit, Est Patient (99214)`;
+            const textarea = document.getElementById('clinical-notes');
+            if(!textarea) return;
+            let i = 0; textarea.value = "";
+            const interval = setInterval(() => { textarea.value += note[i]; i++; if(i >= note.length) clearInterval(interval); }, 5);
+            logNetworkRequest("GET", "/api/emr/notes/12345", 200, { patientId: "M12345678", docId: "12345" });
+        }
+        
+        function triggerOCR() {
+            showToast("Scanning document via OCR...", "warning");
             setTimeout(() => {
-                // 3. Open Modal
-                const modal = document.getElementById('modal-appeal');
-                modal.classList.remove('hidden');
-                document.getElementById('modal-date').innerText = new Date().toLocaleDateString();
-                
-                // 4. Reset Button
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                
-                logConsole(`AI Generated Appeal Letter for #${claimId} based on CO-16 logic.`);
-                showToast("Appeal letter draft ready for review.", 'success');
+                showToast("OCR Complete: Data Extracted.", "success");
+                loadSampleNote();
+                logNetworkRequest("POST", "/api/ocr/scan", 200, { file: "referral.pdf", status: "completed" });
             }, 1200);
         }
 
-        function closeModal() {
-            document.getElementById('modal-appeal').classList.add('hidden');
-        }
-
-        function submitAppeal() {
-            closeModal();
-            // Optional: Visually remove the card or show success
-            const card = document.getElementById('card-denial-1');
-            card.innerHTML = `
-                <div class="text-center w-full py-10">
-                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa-solid fa-check text-2xl text-green-600"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-700">Appeal Submitted</h3>
-                    <p class="text-slate-500 text-sm">Via EDI 277 (Claim Attachment)</p>
-                </div>
-            `;
-            logConsole("Appeal Package (Letter + Operative Report) successfully transmitted to Payer.");
-            showToast("Appeal for CLM-776655 submitted successfully!", 'success');
-        }
-
-        function recommendWriteOff(claimId) {
-            const btn = document.getElementById('btn-writeoff-2');
+        function runNLP() {
+            const textEl = document.getElementById('clinical-notes');
+            if(!textEl || !textEl.value) { showToast("Please enter clinical notes.", "error"); return; }
             
-            // 1. Loading State
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Calculating...';
-            
-            // 2. Simulate Delay
+            const btn = document.querySelector('#view-coding button');
+            let originalText = "";
+            if(btn) {
+                originalText = btn.innerHTML;
+                btn.disabled = true; btn.innerHTML = '<i class=\"fa-solid fa-circle-notch fa-spin\"></i> Processing NLP...';
+            }
+
             setTimeout(() => {
-                // 3. Update UI to "Written Off" state
-                const card = document.getElementById('card-denial-2');
-                card.classList.add('grayscale'); // visual effect
-                card.classList.add('opacity-50');
+                safeSetText('extracted-icd', "R05");
+                safeSetText('extracted-icd-desc', "Cough");
+                safeSetText('extracted-cpt', "99214");
+                safeSetText('extracted-cpt-desc', "Office Visit Level 4");
+                const results = document.getElementById('nlp-results');
+                if(results) results.classList.remove('hidden');
                 
-                btn.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Moved to Ledger';
-                btn.className = "w-full bg-slate-100 text-slate-400 text-xs font-bold py-2 px-3 rounded flex items-center justify-center gap-2 cursor-not-allowed";
+                showToast("AI Extraction Complete.", "success");
+                logConsole(`NLP: Extracted R05 and 99214.`);
+                logNetworkRequest("POST", "/api/nlp/analyze", 200, { text_length: 145, entities_found: 2 });
                 
-                logConsole(`Claim #${claimId} moved to Write-Off Ledger. Revenue impact: -$250.00.`);
-                showToast(`Denial ${claimId} successfully written off.`, 'error'); // Denials are bad, so error/red toast fits
-            }, 1000);
+                if(btn) {
+                    btn.disabled = false; btn.innerHTML = originalText;
+                }
+            }, 1500);
         }
+
+        function transferToEligibility() {
+            switchTab('eligibility');
+            setTimeout(() => {
+                const idInput = document.getElementById('member-id');
+                if(idInput) idInput.value = "M12345678";
+                
+                const payerInput = document.getElementById('payer-select');
+                if(payerInput) payerInput.value = "medicare";
+                
+                const serviceInput = document.getElementById('service-type');
+                if(serviceInput) serviceInput.value = "99214";
+                
+                showToast("Data transferred.", "success");
+            }, 500);
+        }
+        
+        // --- EHR FUNCTIONS ---
+        function fetchFromEHR() {
+            showToast("Connecting to Epic FHIR API...", "warning");
+            setTimeout(() => {
+                const idInput = document.getElementById('member-id');
+                if(idInput) idInput.value = "M12345678";
+                const dobInput = document.getElementById('dob');
+                if(dobInput) dobInput.value = "1920-07-04";
+                const payerInput = document.getElementById('payer-select');
+                if(payerInput) payerInput.value = "medicare";
+                showToast("Patient Data Retrieved from EHR.", "success");
+                logConsole("FHIR: GET /Patient/M12345678 - 200 OK");
+                logNetworkRequest("GET", "https://fhir.epic.com/api/FHIR/R4/Patient/M12345678", 200, { name: "Steve Rogers", dob: "1920-07-04" });
+            }, 1200);
+        }
+        
+        function saveToEHR() {
+            showToast("Syncing to EHR...", "info");
+            logNetworkRequest("POST", "https://fhir.epic.com/api/FHIR/R4/Coverage", 201, { resourceType: "Coverage", status: "active" });
+            setTimeout(() => showToast("Successfully synced to Epic EHR.", "success"), 1000);
+        }
+
+        // --- ELIGIBILITY ---
+        async function startEligibilityBatch() {
+            const btn = document.getElementById('btn-auto-pilot');
+            
+            let originalText = "";
+            if(btn) {
+                originalText = btn.innerHTML;
+                btn.innerHTML = '<i class=\"fa-solid fa-robot fa-spin\"></i> Processing...';
+                btn.disabled = true; btn.classList.add('opacity-75');
+            }
+            
+            const toggle = document.getElementById('turbo-toggle');
+            const isTurbo = toggle ? toggle.checked : false;
+            
+            const statusBadge = document.getElementById('bot-status');
+            if(statusBadge) statusBadge.classList.remove('hidden');
+            
+            runStats = { total: 0, approved: 0, denied: 0, totalValue: 0.0 };
+            processedPatients = [];
+            
+            for (let i = 0; i < BOT_PATIENTS.length; i++) {
+                const p = BOT_PATIENTS[i];
+                safeSetText('bot-counter-text', `BOT RUNNING... ${i+1}/${BOT_PATIENTS.length}`);
+                
+                const idInput = document.getElementById('member-id');
+                if(idInput) idInput.value = p.id;
+                
+                const dobInput = document.getElementById('dob');
+                if(dobInput) dobInput.value = p.dob;
+                
+                const payerInput = document.getElementById('payer-select');
+                if(payerInput) payerInput.value = p.payer_key;
+                
+                // Name Split Safe Check
+                const nameParts = p.name.split(' ');
+                const fName = nameParts[0].toUpperCase();
+                const lName = nameParts.length > 1 ? nameParts[1].toUpperCase() : fName;
+
+                logEDI(`ISA*00*...NM1*IL*1*${lName}*${fName}...`, true);
+                logFHIR({ resourceType: "Coverage", id: p.id, beneficiary: { reference: `Patient/${p.name.replace(" ", "")}` } }, true);
+                
+                // SIMULATE API CALL
+                logNetworkRequest("POST", `https://gateway.availity.com/api/v1/eligibility`, 200, { memberId: p.id, payer: p.payer_key });
+
+                renderResults(p.payer_key, p.id, p.cpt, true);
+                
+                const isInactive = p.id.startsWith('Z');
+                const status = isInactive ? 'INACTIVE' : 'ACTIVE';
+                
+                logEDI(`ISA*00*...EB*${isInactive?'6':'1'}*...MSG*${status}`, false);
+                logFHIR({ resourceType: "CoverageEligibilityResponse", status: status.toLowerCase(), outcome: isInactive ? "error" : "complete" }, false);
+                logConsole(`Checked ${p.name}: ${status}`);
+
+                runStats.total++;
+                if(isInactive) runStats.denied++; else runStats.approved++;
+                runStats.totalValue += p.amount;
+                processedPatients.push({...p, status: status, eligibility_date: new Date().toLocaleDateString()});
+
+                await delay(isTurbo ? 200 : 1000);
+            }
+
+            if(btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false; btn.classList.remove('opacity-75');
+            }
+            if(statusBadge) statusBadge.classList.add('hidden');
+            
+            const claimsAction = document.getElementById('claims-actions');
+            if(claimsAction) claimsAction.innerHTML = `<button onclick="runClaimsBatch()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded shadow flex items-center gap-2"><i class="fa-solid fa-bolt"></i> Run Batch Status Check (EDI 276)</button>`;
+            
+            showToast("Batch Complete. " + runStats.total + " records processed.", "success");
+        }
+
+        function renderResults(payerKey, memberId, selectedCpt, isBot) {
+            const data = MOCK_DB[payerKey];
+            const p = BOT_PATIENTS.find(x => x.id === memberId);
+            const isInactive = memberId.startsWith('Z');
+
+            safeSetText('res-payer', data.name);
+            safeSetText('res-name', p ? p.name : "Unknown");
+            safeSetText('res-date', new Date().toLocaleDateString());
+            safeSetText('status-badge', isInactive ? "INACTIVE" : "ACTIVE");
+            safeSetClass('status-badge', isInactive ? "bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold" : "bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold");
+            
+            safeSetText('res-deductible', `$${data.deductible}`);
+            safeSetText('res-met', `$${data.met}`);
+            safeSetText('res-coins', `${data.coinsurance_pct}%`);
+            safeSetText('res-copay', `$${data.copay.toFixed(2)}`);
+            safeSetText('res-oop', data.oop);
+            safeSetText('res-network', data.network);
+            
+            if (p) {
+                safeSetText('ai-raf', p.raf.toFixed(1));
+                safeSetHTML('care-gaps-list', p.gaps && p.gaps.length > 0 ? p.gaps.map(g => `<span class="text-xs bg-red-500/20 text-red-100 px-2 py-1 rounded border border-red-500/50">${g}</span>`).join('') : `<span class="text-xs bg-green-500/20 text-green-100 px-2 py-1 rounded">No Open Gaps</span>`);
+                safeSetHTML('sdoh-list', p.sdoh && p.sdoh.length > 0 ? p.sdoh.map(s => `<span class="text-xs bg-purple-500/20 text-purple-100 px-2 py-1 rounded border border-purple-500/50">${s}</span>`).join('') : `<span class="text-xs text-indigo-300 italic">None detected</span>`);
+    
+                // NEW: Propensity to Pay
+                const p2p = p.p2p || 50;
+                safeSetText('p2p-score', p2p > 80 ? "High" : (p2p > 50 ? "Medium" : "Low"));
+                safeSetClass('p2p-score', p2p > 80 ? "text-xs font-bold text-green-300" : (p2p > 50 ? "text-xs font-bold text-yellow-300" : "text-xs font-bold text-red-300"));
+                safeSetStyle('p2p-bar', 'width', `${p2p}%`);
+                safeSetClass('p2p-bar', `h-1.5 rounded-full ${p2p > 80 ? 'bg-green-400' : (p2p > 50 ? 'bg-yellow-400' : 'bg-red-400')}`);
+            }
+
+            const warn = document.getElementById('scrubber-warning');
+            if(warn) {
+                if(p && p.cpt === '44120' && payerKey === 'kaiser') warn.classList.remove('hidden');
+                else warn.classList.add('hidden');
+            }
+            
+            // Re-apply mask if needed
+            togglePrivacy(); 
+        }
+        
+        function generateGFE() {
+            const nameEl = document.getElementById('res-name');
+            const name = nameEl ? nameEl.innerText : "Patient";
+            showToast("Generating Good Faith Estimate (GFE) PDF...", "success");
+            setTimeout(() => { alert("GOOD FAITH ESTIMATE (No Surprises Act)\n\nPatient: " + name + "\nService: Office Visit\nEstimated Cost: $150.00\n\nThis is an estimate."); }, 1000);
+        }
+
+        function generatePaymentLink() {
+            const modal = document.getElementById('modal-payment');
+            const qr = document.getElementById('qrcode');
+            if(qr) {
+                qr.innerHTML = ""; // Clear previous
+                new QRCode(qr, {
+                    text: "https://nexgen.pay/s8292",
+                    width: 128,
+                    height: 128,
+                });
+            }
+            if(modal) modal.classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            const m = document.getElementById('modal-payment');
+            if(m) m.classList.add('hidden');
+        }
+
+        // --- CLAIMS ---
+        function renderClaimsTable() {
+            const tbody = document.getElementById('claims-table-body');
+            if(!tbody) return;
+
+            const total = claimsData.length > 0 ? claimsData.length : processedPatients.length;
+            const outstanding = processedPatients.reduce((sum, p) => sum + p.amount, 0);
+            
+            safeSetText('kpi-total-claims', total);
+            safeSetText('kpi-outstanding', `$${outstanding.toLocaleString()}`);
+
+            if (processedPatients.length === 0) return;
+
+            let html = '';
+            const source = claimsData.length > 0 ? claimsData : processedPatients;
+
+            source.forEach(p => {
+                let statusBadge = !p.claim_status ? 'bg-slate-100 text-slate-600' : (p.claim_status === 'Paid' ? 'bg-green-100 text-green-800' : (p.claim_status === 'Denied' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'));
+                let statusText = !p.claim_status ? 'Ready to Send' : (p.claim_status === 'Paid' ? 'Paid (P1)' : (p.claim_status === 'Denied' ? `Denied (${p.denial_code || 'Gen'})` : 'Adjudication'));
+
+                html += `
+                <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                    <td class="px-6 py-4 font-mono text-xs text-slate-500">${p.claim_id}</td>
+                    <td class="px-6 py-4 font-bold text-slate-700 phi-target ${isPrivacyMaskOn ? 'phi-masked' : ''}">${p.name}</td>
+                    <td class="px-6 py-4 text-xs font-mono text-slate-500">${p.icd}</td>
+                    <td class="px-6 py-4 text-xs uppercase">${p.payer_key}</td>
+                    <td class="px-6 py-4"><span class="${statusBadge} text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide border border-opacity-20">${statusText}</span></td>
+                    <td class="px-6 py-4 font-mono text-slate-700">$${p.amount.toFixed(2)}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        async function runClaimsBatch() {
+            if(processedPatients.length === 0) { showToast("No patients found.", "error"); return; }
+            
+            const toggle = document.getElementById('turbo-toggle');
+            const isTurbo = toggle ? toggle.checked : false;
+            
+            showToast("Initiating Batch Claims Status Check (EDI 276)...", "warning");
+            if(claimsData.length === 0) claimsData = JSON.parse(JSON.stringify(processedPatients));
+
+            for(let i=0; i<claimsData.length; i++) {
+                let p = claimsData[i];
+                // Name Split Safe Check
+                const nameParts = p.name.split(' ');
+                const fName = nameParts[0].toUpperCase();
+                const lName = nameParts.length > 1 ? nameParts[1].toUpperCase() : fName;
+
+                logEDI(`ISA*00*...ST*276*...TRN*1*${p.claim_id}*...NM1*1L*1*${lName}...`, true);
+                await delay(isTurbo ? 100 : 600);
+
+                let newStatus = 'Adjudication';
+                let denialCode = null;
+                if (p.status === 'INACTIVE') { newStatus = 'Denied'; denialCode = 'CO-27'; } 
+                else if (p.cpt === '44120' && p.icd === 'R51') { newStatus = 'Denied'; denialCode = 'CO-50'; }
+                else {
+                    const rand = Math.random();
+                    if(rand > 0.8) { newStatus = 'Denied'; denialCode = 'CO-16'; } else { newStatus = 'Paid'; }
+                }
+
+                p.claim_status = newStatus; p.denial_code = denialCode;
+                const codeEDI = newStatus === 'Paid' ? 'P1' : (denialCode || 'A2');
+                logEDI(`ISA*00*...ST*277*...TRN*2*${p.claim_id}*...STC*${codeEDI}*...`, false);
+                logConsole(`Claim ${p.claim_id} (${p.name}): ${newStatus}`);
+                logNetworkRequest("POST", "https://gateway.availity.com/api/v1/claims/status", 200, { claimId: p.claim_id, status: newStatus });
+
+                renderClaimsTable();
+                
+                const deniedCount = claimsData.filter(c => c.claim_status === 'Denied').length;
+                safeSetText('kpi-denial-rate', `${Math.round((deniedCount / (i+1)) * 100)}%`);
+            }
+            showToast("Claims Status Batch Complete.", "success");
+        }
+
+        // --- DENIALS ---
+        function renderDenialsWorklist() {
+            const container = document.getElementById('denials-list');
+            if(!container) return;
+            const deniedClaims = claimsData.filter(c => c.claim_status === 'Denied');
+            const revenue = deniedClaims.reduce((sum, c) => sum + c.amount, 0);
+            safeSetText('denial-kpi-revenue', `$${revenue.toLocaleString()}`);
+
+            if(deniedClaims.length === 0) { container.innerHTML = `<div class="text-center py-12 text-slate-400"><p>No denials detected.</p></div>`; return; }
+
+            let html = '';
+            deniedClaims.forEach(c => {
+                let strategy = '', winProb = 0, badgeColor = '';
+                if(c.denial_code === 'CO-27') { strategy = 'Write-Off'; winProb = 5; badgeColor = 'text-red-600 bg-red-50'; } 
+                else if (c.denial_code === 'CO-16') { strategy = 'Attach Op Report'; winProb = 92; badgeColor = 'text-green-600 bg-green-50'; } 
+                else if (c.denial_code === 'CO-50') { strategy = 'Med Necessity Appeal'; winProb = 65; badgeColor = 'text-orange-600 bg-orange-50'; }
+
+                html += `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row gap-6 items-center">
+                    <div class="flex-shrink-0 text-center"><div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center border border-red-100"><span class="font-bold text-red-600 text-lg">${c.denial_code}</span></div></div>
+                    <div class="flex-grow text-left w-full">
+                        <div class="flex justify-between items-start">
+                            <div><h4 class="font-bold text-slate-800 phi-target ${isPrivacyMaskOn ? 'phi-masked' : ''}">${c.name}</h4><p class="text-xs text-slate-500 font-mono">${c.claim_id} • ${c.payer_key.toUpperCase()}</p></div>
+                            <span class="text-sm font-bold text-slate-700">$${c.amount.toFixed(2)}</span>
+                        </div>
+                        <div class="mt-3 flex items-center gap-2"><span class="px-2 py-1 rounded text-[10px] font-bold border ${badgeColor}">${strategy}</span></div>
+                    </div>
+                    <div class="w-full md:w-48 bg-slate-50 p-3 rounded border border-slate-100">
+                        <div class="flex justify-between text-[10px] font-bold mb-1"><span class="text-slate-500">AI Win Prob.</span><span class="${winProb > 50 ? 'text-green-600' : 'text-red-500'}">${winProb}%</span></div>
+                        <div class="w-full bg-slate-200 rounded-full h-1.5 mb-3"><div class="${winProb > 50 ? 'bg-green-500' : 'bg-red-500'} h-1.5 rounded-full" style="width: ${winProb}%"></div></div>
+                        <button onclick="openAppealModal('${c.claim_id}')" class="w-full bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-bold py-2 rounded transition-colors">Resolve Denial</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function openAppealModal(claimId) {
+            const claim = claimsData.find(c => c.claim_id === claimId);
+            const modal = document.getElementById('modal-appeal');
+            
+            // LOGIC: Build specific body text based on denial reason
+            let specific_appeal_logic_text = "";
+            if(claim.denial_code === 'CO-16') {
+                specific_appeal_logic_text = "The claim was denied for 'Lack of Information'. Enclosed please find the operative report and clinical notes for the date of service in question, which were previously submitted but apparently not linked to the claim file.";
+            } else if(claim.denial_code === 'CO-50') {
+                specific_appeal_logic_text = `The claim was denied as 'Not Medically Necessary'. However, the patient's diagnosis of <strong>${claim.icd}</strong> clearly supports the medical necessity of CPT <strong>${claim.cpt}</strong> as outlined in the payer's own coverage determination policy (LCD/NCD).`;
+            } else {
+                specific_appeal_logic_text = "We are requesting a review of this claim as it was processed incorrectly based on the patient's active coverage at the time of service.";
+            }
+
+            const letterHTML = `
+            <div class="font-serif text-slate-800 leading-relaxed space-y-4">
+                <!-- Header -->
+                <div class="border-b-2 border-slate-800 pb-4 mb-6">
+                    <h1 class="text-2xl font-bold uppercase tracking-widest">NexGen Medical Group</h1>
+                    <p class="text-xs text-slate-500">123 Innovation Dr, Suite 100 • Silicon Valley, CA 94025 • (555) 019-2834</p>
+                </div>
+
+                <!-- Meta -->
+                <div class="flex justify-between items-start text-sm mb-8">
+                    <div>
+                        <p class="font-bold">${new Date().toLocaleDateString()}</p>
+                        <br>
+                        <p><strong>ATTN: Appeals Department</strong></p>
+                        <p>${claim.payer_key.toUpperCase()} Claims Processing</p>
+                        <p>PO Box 998877</p>
+                        <p>Lexington, KY 40512</p>
+                    </div>
+                    <div class="text-right">
+                        <p><strong>RE: Level 1 Appeal - Request for Reconsideration</strong></p>
+                        <p>Claim ID: ${claim.claim_id}</p>
+                        <p>Patient: ${claim.name}</p>
+                        <p>Member ID: ${claim.id}</p>
+                        <p>DOB: ${claim.dob}</p>
+                        <p>Total Billed: $${claim.amount.toFixed(2)}</p>
+                    </div>
+                </div>
+
+                <!-- Salutation -->
+                <p>To Whom It May Concern,</p>
+
+                <!-- Body -->
+                <p>This letter serves as a formal appeal for the above-referenced claim, which was denied on ${new Date().toLocaleDateString()} with the reason code: <strong>${claim.denial_code}</strong>.</p>
+
+                <p>${specific_appeal_logic_text}</p>
+
+                <p>The attached documentation clearly supports the services rendered. We have reviewed the payer policy guidelines and confirmed that all requirements were met at the time of service.</p>
+
+                <!-- Closing -->
+                <p>We respectfully request that you review the attached medical records and process this claim for payment immediately. If you require further information, please contact our billing office at (555) 019-2834.</p>
+
+                <br>
+                <p>Sincerely,</p>
+                <div class="mt-4">
+                    <p class="font-bold font-signature text-2xl">Sarah Connor, CPC</p>
+                    <p class="text-xs uppercase">Certified Professional Coder</p>
+                    <p class="text-xs">NexGen Medical Group</p>
+                </div>
+                
+                <div class="mt-8 pt-4 border-t border-slate-200 text-[10px] text-slate-400">
+                    <p>Enclosures: Medical Records, Operative Report, Original Claim (CMS-1500)</p>
+                </div>
+            </div>
+            `;
+
+            safeSetHTML('appeal-content', letterHTML);
+            if(modal) modal.classList.remove('hidden');
+        }
+
+        function closeModal() { const m = document.getElementById('modal-appeal'); if(m) m.classList.add('hidden'); }
+        function closeReportModal() { const m = document.getElementById('modal-report'); if(m) m.classList.add('hidden'); switchTab('claims'); }
+        function submitAppeal() { closeModal(); showToast("Appeal Transmitted via EDI 277", "success"); logEDI(`ISA*00*...ST*275*...`, true); }
+        function recommendWriteOff(claimId) { showToast("Moved to Write-Off Ledger", "error"); }
+        function prefillDemo() { 
+            const mem = document.getElementById('member-id');
+            const dob = document.getElementById('dob');
+            if(mem) mem.value = "A99887766"; 
+            if(dob) dob.value = "1985-06-15"; 
+            showToast("Demo data loaded.", 'success'); 
+        }
+        function runVerification() { showToast("Use 'Run Automation' in the sidebar.", "warning"); }
+        function saveToEHR() { showToast("Saved to EHR.", "success"); }
+        function calculateLiability() {}
+        function checkAuthStatus() { showToast("Checking Auth...", "warning"); }
+        function updateClaimsStatus() { showToast("Please run the batch check below.", "warning"); }
+        function downloadReport() { showToast("Downloading JSON...", "success"); }
+        function downloadLogs() { showToast("Downloading Logs...", "success"); }
+
+        // --- VOICE AI LOGIC ---
+        async function startVoiceCall(payer) {
+            const statusText = document.getElementById('call-status-text');
+            const waves = document.getElementById('voice-waves');
+            const transcript = document.getElementById('transcript-box');
+            const timer = document.getElementById('call-timer');
+            
+            if(transcript) transcript.classList.remove('hidden');
+            if(transcript) transcript.innerHTML = '';
+            if(waves) waves.classList.remove('hidden');
+            if(timer) timer.classList.remove('hidden');
+            if(statusText) statusText.innerText = "Dialing 1-800-" + payer.toUpperCase() + "...";
+            
+            let seconds = 0;
+            const timerInterval = setInterval(() => {
+                seconds++;
+                if(timer) timer.innerText = `00:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+
+            const script = [
+                { role: 'bot', text: "Calling Payer Gateway..." },
+                { role: 'payer', text: "Welcome to the Provider Line. Please say your NPI." },
+                { role: 'bot', text: "NPI: 1928374650" },
+                { role: 'payer', text: "Thank you. Locating member... Found." },
+                { role: 'payer', text: "Coverage is Active. Checking specialty benefits..." },
+                { role: 'bot', text: "Checking CPT 99214 and 44120." },
+                { role: 'payer', text: "Copay is $20.00. Surgical requires Auth." },
+                { role: 'bot', text: "Thank you. Goodbye." }
+            ];
+
+            for (let line of script) {
+                await delay(1500);
+                const color = line.role === 'bot' ? 'text-blue-400' : 'text-slate-300';
+                const prefix = line.role === 'bot' ? 'AI Agent:' : 'IVR System:';
+                if(transcript) {
+                    transcript.innerHTML += `<p class="mb-2"><span class="font-bold ${color}">${prefix}</span> ${line.text}</p>`;
+                    transcript.scrollTop = transcript.scrollHeight;
+                }
+                if(line.text.includes("Active")) {
+                    safeSetText('voice-benefit', "Active / PPO");
+                    safeSetText('voice-auth', "Required for Surgery");
+                    safeSetText('voice-ref', "Ref# 99382");
+                }
+            }
+
+            if(statusText) statusText.innerText = "Call Complete";
+            if(waves) waves.classList.add('hidden');
+            clearInterval(timerInterval);
+            showToast("Voice Call Data synced to Record.", "success");
+        }
+
+        // --- COPILOT LOGIC ---
+        function toggleCopilot() {
+            const win = document.getElementById('copilot-window');
+            if(win) win.classList.toggle('hidden');
+        }
+
+        function handleChatEnter(e) {
+            if(e.key === 'Enter') sendChat();
+        }
+
+        function sendChat() {
+            const input = document.getElementById('copilot-input');
+            if(!input) return;
+            const msg = input.value;
+            if(!msg) return;
+            
+            addChatMessage('user', msg);
+            input.value = "";
+            
+            setTimeout(() => {
+                let response = "I'm not sure how to help with that yet.";
+                const lower = msg.toLowerCase();
+                if(lower.includes("denial") || lower.includes("explain")) {
+                    response = "Based on the active screen, I see a denial for CO-16. This code means 'Claim/Service lacks information'. <br><br><strong>Recommendation:</strong> The payer is likely missing the Operative Report. I can attach it automatically if you wish.";
+                } else if (lower.includes("sms") || lower.includes("draft") || lower.includes("email")) {
+                    response = "Here is a draft SMS for the patient:<br><br><em>'Hi Steve, your insurance claim was processed. Your remaining responsibility is $150.00. Click here to view your statement: nexgen.pay/s8292'</em>";
+                } else if (lower.includes("cpt") || lower.includes("code")) {
+                    response = "<strong>CPT 99214</strong>: Office or other outpatient visit for the evaluation and management of an established patient. Typically 30-39 minutes.";
+                } else if (lower.includes("hello") || lower.includes("hi")) {
+                    response = "Hello! I am your RCM Copilot. I can help you resolve denials, look up codes, or draft patient communications.";
+                }
+                addChatMessage('ai', response);
+            }, 800);
+        }
+
+        function suggestPrompt(text) {
+            const input = document.getElementById('copilot-input');
+            if(input) {
+                input.value = text;
+                sendChat();
+            }
+        }
+
+        function addChatMessage(sender, text) {
+            const history = document.getElementById('copilot-chat-history');
+            if(!history) return;
+            const div = document.createElement('div');
+            div.className = "flex gap-2 " + (sender === 'user' ? "flex-row-reverse" : "");
+            const icon = sender === 'user' ? '<div class="w-6 h-6 bg-slate-300 rounded-full flex-shrink-0 flex items-center justify-center text-slate-600"><i class="fa-solid fa-user text-[10px]"></i></div>' 
+                                           : '<div class="w-6 h-6 bg-indigo-100 rounded-full flex-shrink-0 flex items-center justify-center text-indigo-600"><i class="fa-solid fa-robot text-[10px]"></i></div>';
+            const bubbleColor = sender === 'user' ? "bg-indigo-600 text-white rounded-l-lg rounded-br-lg" : "bg-white border border-slate-100 text-slate-700 rounded-r-lg rounded-bl-lg";
+            div.innerHTML = `${icon}<div class="${bubbleColor} p-2 shadow-sm text-xs leading-relaxed">${text}</div>`;
+            history.appendChild(div);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        // Init
+        togglePrivacy(); 
     </script>
 </body>
 </html>
